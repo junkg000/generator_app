@@ -15,6 +15,32 @@ def get_rembg_session():
     from rembg import new_session
     return new_session('isnet-general-use')
 
+def remove_small_noise(img):
+    try:
+        import cv2
+        import numpy as np
+        arr = np.array(img)
+        alpha = arr[:, :, 3]
+        _, binary_alpha = cv2.threshold(alpha, 10, 255, cv2.THRESH_BINARY)
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_alpha, connectivity=8)
+        if num_labels <= 1:
+            return img
+        
+        areas = stats[1:, cv2.CC_STAT_AREA]
+        max_area = np.max(areas)
+        threshold = max_area * 0.05 # 가장 큰 물체 크기의 5% 미만인 파편은 모두 제거
+        
+        new_alpha = np.zeros_like(alpha)
+        for i in range(1, num_labels):
+            if stats[i, cv2.CC_STAT_AREA] >= threshold:
+                new_alpha[labels == i] = alpha[labels == i]
+                
+        arr[:, :, 3] = new_alpha
+        return PIL.Image.fromarray(arr)
+    except Exception as e:
+        print(f"Noise removal error: {e}")
+        return img
+
 SAVE_DIR = os.path.join(os.getcwd(), "saved_products")
 os.makedirs(SAVE_DIR, exist_ok=True)
 
@@ -216,6 +242,7 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             img.save(img_byte_arr, format='PNG')
                             fg_bytes = remove(img_byte_arr.getvalue(), session=get_rembg_session(), post_process_mask=True, alpha_matting=True)
                             fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
+                            fg_img = remove_small_noise(fg_img)
                             
                             # 2. 고급 배경 AI 생성 (피사체 없이 배경만)
                             bg_prompt = "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text."
@@ -399,6 +426,7 @@ for i in range(5):
                                     img.save(img_byte_arr, format='PNG')
                                     fg_bytes = remove(img_byte_arr.getvalue(), session=get_rembg_session(), post_process_mask=True, alpha_matting=True)
                                     fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
+                                    fg_img = remove_small_noise(fg_img)
                                     
                                     # 2. 고급 배경 AI 생성 (피사체 없이 배경만)
                                     bg_prompt = "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text."
