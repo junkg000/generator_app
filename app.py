@@ -236,8 +236,11 @@ def render_hero_editor():
             cy = (bg.size[1] - new_size[1]) // 2 + offset_y
             shadow_y = cy + int(max(new_size)*0.02)
             
-            bg.paste(shadow, (cx, shadow_y), mask=shadow)
-            bg.paste(fg, (cx, cy), mask=fg)
+            temp_layer = PIL.Image.new("RGBA", bg.size, (0, 0, 0, 0))
+            temp_layer.paste(shadow, (cx, shadow_y), mask=shadow)
+            temp_layer.paste(fg, (cx, cy), mask=fg)
+            
+            bg = PIL.Image.alpha_composite(bg, temp_layer)
             
             if overlay_text.strip():
                 draw = ImageDraw.Draw(bg)
@@ -263,7 +266,7 @@ def render_hero_editor():
             encoded = base64.b64encode(out_bytes.getvalue()).decode('utf-8')
             
             # 미리보기 공간에 이미지 그리기 (왼쪽 컬럼)
-            preview_container.image(bg, use_container_width=True)
+            preview_container.image(bg, use_container_width=False)
             
             # 저장 버튼 동작 처리
             if save_btn:
@@ -292,13 +295,14 @@ with col1:
         
     elif hero_file:
         st.image(hero_file, width=450)
+        use_matting = st.checkbox("테두리 부드럽게 다듬기 (털, 복잡한 윤곽선 전용)", value=False)
         if st.button("⚡ AI 없이 바로 편집하기 (새창)", type="secondary"):
             with st.spinner("이미지 준비 중 (누끼 제거)... ✂️"):
                 import io, PIL.Image
                 from rembg import remove
                 
                 img_bytes = hero_file.getvalue()
-                fg_bytes = remove(img_bytes, session=get_rembg_session(), post_process_mask=True, alpha_matting=True)
+                fg_bytes = remove(img_bytes, session=get_rembg_session(), post_process_mask=True, alpha_matting=use_matting)
                 fg = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
                 
                 # 기본 배경은 투명으로 설정 (나중에 단색/이미지로 변경 가능)
@@ -386,7 +390,7 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             from rembg import remove
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
-                            fg_bytes = remove(img_byte_arr.getvalue(), session=get_rembg_session(), post_process_mask=True, alpha_matting=True)
+                            fg_bytes = remove(img_byte_arr.getvalue(), session=get_rembg_session(), post_process_mask=True)
                             fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
                             fg_img = remove_small_noise(fg_img)
                             
@@ -591,7 +595,7 @@ for i in range(5):
                                     from rembg import remove
                                     img_byte_arr = io.BytesIO()
                                     img.save(img_byte_arr, format='PNG')
-                                    fg_bytes = remove(img_byte_arr.getvalue(), session=get_rembg_session(), post_process_mask=True, alpha_matting=True)
+                                    fg_bytes = remove(img_byte_arr.getvalue(), session=get_rembg_session(), post_process_mask=True)
                                     fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
                                     fg_img = remove_small_noise(fg_img)
                                     
