@@ -413,20 +413,38 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                                 except Exception:
                                     continue
                             
-                            if not generated_bgs:
-                                # 필터링 당하거나 에러 발생 시, 파이썬 코드로 직접 럭셔리한 스튜디오 조명 배경을 그립니다.
-                                from PIL import ImageDraw, ImageFilter
-                                fallback_bg = PIL.Image.new("RGBA", fg_img.size, (15, 15, 18, 255))
-                                draw = ImageDraw.Draw(fallback_bg)
-                                for y in range(fg_img.size[1]):
-                                    ratio = y / fg_img.size[1]
-                                    r = int(58 - (58 - 13) * ratio)
-                                    g = int(62 - (62 - 14) * ratio)
-                                    b = int(71 - (71 - 17) * ratio)
-                                    draw.line([(0, y), (fg_img.size[0], y)], fill=(r, g, b, 255))
-                                import io
+                            # 항상 4개의 배경을 보장 (API 필터링/에러 대비 파이썬 직접 렌더링)
+                            from PIL import ImageDraw
+                            import io
+                            def create_fallback_bg(theme_idx, size):
+                                bg = PIL.Image.new("RGBA", size, (255, 255, 255, 255))
+                                draw = ImageDraw.Draw(bg)
+                                if theme_idx == 0:
+                                    for y in range(size[1]):
+                                        ratio = y / size[1]
+                                        r, g, b = int(58 - 45 * ratio), int(62 - 48 * ratio), int(71 - 54 * ratio)
+                                        draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+                                elif theme_idx == 1:
+                                    for y in range(size[1]):
+                                        ratio = y / size[1]
+                                        r, g, b = int(255 - 20 * ratio), int(255 - 20 * ratio), int(255 - 15 * ratio)
+                                        draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+                                elif theme_idx == 2:
+                                    for y in range(size[1]):
+                                        ratio = y / size[1]
+                                        r, g, b = int(245 - 30 * ratio), int(230 - 30 * ratio), int(200 - 40 * ratio)
+                                        draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+                                else:
+                                    for y in range(size[1]):
+                                        ratio = y / size[1]
+                                        r, g, b = int(230 - 10 * ratio), int(240 - 20 * ratio), int(255 - 10 * ratio)
+                                        draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+                                return bg
+                            
+                            while len(generated_bgs) < 4:
+                                fb = create_fallback_bg(len(generated_bgs), fg_img.size)
                                 out_b = io.BytesIO()
-                                fallback_bg.save(out_b, format='PNG')
+                                fb.save(out_b, format='PNG')
                                 generated_bgs.append(out_b.getvalue())
                                 
                             st.session_state.hero_ai_bg_candidates = generated_bgs
