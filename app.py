@@ -10,6 +10,11 @@ import google.generativeai as genai
 
 st.set_page_config(page_title="프리미엄 상세페이지 생성기", layout="wide")
 
+@st.cache_resource
+def get_rembg_session():
+    from rembg import new_session
+    return new_session('isnet-general-use')
+
 SAVE_DIR = os.path.join(os.getcwd(), "saved_products")
 os.makedirs(SAVE_DIR, exist_ok=True)
 
@@ -209,7 +214,7 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             from rembg import remove
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
-                            fg_bytes = remove(img_byte_arr.getvalue())
+                            fg_bytes = remove(img_byte_arr.getvalue(), session=get_rembg_session(), post_process_mask=True, alpha_matting=True)
                             fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
                             
                             # 2. 고급 배경 AI 생성 (피사체 없이 배경만)
@@ -392,7 +397,7 @@ for i in range(5):
                                     from rembg import remove
                                     img_byte_arr = io.BytesIO()
                                     img.save(img_byte_arr, format='PNG')
-                                    fg_bytes = remove(img_byte_arr.getvalue(), post_process_mask=True, alpha_matting=True)
+                                    fg_bytes = remove(img_byte_arr.getvalue(), session=get_rembg_session(), post_process_mask=True, alpha_matting=True)
                                     fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
                                     
                                     # 2. 고급 배경 AI 생성 (피사체 없이 배경만)
