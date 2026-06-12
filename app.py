@@ -124,16 +124,16 @@ with col1:
     hero_file = st.file_uploader("🌟 대표 이미지 1장", accept_multiple_files=False, type=['jpg','png','jpeg'], key="hero_file_main", on_change=on_hero_change)
     if st.session_state.get('hero_ai_b64'):
         import base64
-        st.image(base64.b64decode(st.session_state.hero_ai_b64), width=500)
+        st.image(base64.b64decode(st.session_state.hero_ai_b64), width=700)
         st.success("✨ AI 고퀄리티 사진이 적용되었습니다!")
         if st.button("❌ 원본 사진으로 복구", key="revert_hero"):
             on_hero_change()
             st.rerun()
     elif hero_file:
-        st.image(hero_file, width=500)
+        st.image(hero_file, width=700)
     elif st.session_state.get('loaded_hero_b64'):
         import base64
-        st.image(base64.b64decode(st.session_state.loaded_hero_b64), width=500)
+        st.image(base64.b64decode(st.session_state.loaded_hero_b64), width=700)
         st.info("✅ AI 생성/보관함 이미지가 대기 중입니다.")
 with col2:
     search_kw_default = st.session_state.get('loaded_search_kw', "")
@@ -235,8 +235,8 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             # 3. 배경과 피사체 합성 (고급스러운 여백과 그림자 추가)
                             bg_size = bg_img.size # AI 생성 배경(보통 1024x1024) 또는 수제 배경
                             
-                            # 피사체 크기를 배경의 90%로 줄여서 적절한 여백 확보
-                            target_max = int(min(bg_size) * 0.9)
+                            # 피사체 크기를 배경에 꽉 차게(100%) 키워서 시원하게 배치
+                            target_max = int(min(bg_size) * 1.0)
                             scale = target_max / max(fg_img.size)
                             new_size = (int(fg_img.size[0] * scale), int(fg_img.size[1] * scale))
                             fg_img = fg_img.resize(new_size, PIL.Image.Resampling.LANCZOS)
@@ -310,16 +310,16 @@ for i in range(5):
             ai_info = st.session_state.story_ai_blocks[i]
             if ai_info and ai_info.get('b64'):
                 import base64
-                st.image(base64.b64decode(ai_info['b64']), width=500)
+                st.image(base64.b64decode(ai_info['b64']), width=700)
                 st.success("✨ AI 사진 적용됨")
                 if st.button("❌ 원본 복구", key=f"rev_{i}"):
                     clear_story_ai(i)
                     st.rerun()
             elif f:
-                st.image(f, width=500)
+                st.image(f, width=700)
             elif loaded_b64:
                 import base64
-                st.image(base64.b64decode(loaded_b64), width=500)
+                st.image(base64.b64decode(loaded_b64), width=700)
                 st.info("✅ 보관함/AI 이미지 대기 중")
             
             ai_b64 = ai_info['b64'] if ai_info else None
@@ -417,8 +417,8 @@ for i in range(5):
                                     # 3. 배경과 피사체 합성 (고급스러운 여백과 그림자 추가)
                                     bg_size = bg_img.size
                                     
-                                    # 피사체 크기를 배경의 90%로 줄여서 여백 확보
-                                    target_max = int(min(bg_size) * 0.9)
+                                    # 피사체 크기를 배경에 꽉 차게(100%) 키움
+                                    target_max = int(min(bg_size) * 1.0)
                                     scale = target_max / max(fg_img.size)
                                     new_size = (int(fg_img.size[0] * scale), int(fg_img.size[1] * scale))
                                     fg_img = fg_img.resize(new_size, PIL.Image.Resampling.LANCZOS)
