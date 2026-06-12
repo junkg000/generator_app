@@ -150,6 +150,95 @@ def on_hero_change():
     st.session_state.pop('hero_ai_b64', None)
     st.session_state.pop('hero_ai_mime', None)
 
+def render_hero_editor():
+    if 'hero_fg_img' in st.session_state and 'hero_bg_img' in st.session_state:
+        with st.expander("🎨 세부 편집기 (위치, 크기, 글씨, 배경)"):
+            st.markdown("**[조작 방법]** 슬라이더나 텍스트를 변경하면 위쪽 결과 이미지가 실시간으로 업데이트됩니다.")
+            
+            # 레이아웃 3분할
+            col_a, col_b, col_c = st.columns(3)
+            
+            with col_a:
+                st.markdown("**1. 피사체 조절**")
+                scale = st.slider("크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, key='edit_scale')
+                offset_x = st.slider("가로 위치 (X)", -1000, 1000, 0, 10, key='edit_x')
+                offset_y = st.slider("세로 위치 (Y)", -1000, 1000, 0, 10, key='edit_y')
+                
+            with col_b:
+                st.markdown("**2. 배경 변경**")
+                bg_upload = st.file_uploader("배경 사진 직접 업로드", type=['png','jpg','jpeg'], key='edit_bg_file')
+                use_solid_bg = st.checkbox("단색 배경 사용하기", value=False, key='edit_use_solid')
+                bg_color = st.color_picker("단색 배경 색상", "#000000", key='edit_bg_color')
+                
+            with col_c:
+                st.markdown("**3. 글씨 오버레이**")
+                overlay_text = st.text_input("삽입할 문구 (여러줄 입력 불가)", "", key='edit_text')
+                text_size = st.slider("글씨 크기", 10, 300, 80, 5, key='edit_text_size')
+                text_y = st.slider("글씨 세로 위치", 0, 1500, 100, 10, key='edit_text_y')
+                text_color = st.color_picker("글씨 색상", "#FFFFFF", key='edit_color')
+                
+            # 실시간 재합성 로직
+            try:
+                fg = st.session_state.hero_fg_img.copy()
+                bg = st.session_state.hero_bg_img.copy()
+                
+                # 커스텀 배경 적용
+                if bg_upload is not None:
+                    import io
+                    bg = PIL.Image.open(io.BytesIO(bg_upload.getvalue())).convert("RGBA")
+                    # 배경을 기존 캔버스 사이즈에 맞춤
+                    bg = bg.resize(st.session_state.hero_bg_img.size, PIL.Image.Resampling.LANCZOS)
+                elif use_solid_bg:
+                    bg = PIL.Image.new("RGBA", bg.size, bg_color)
+                
+                # 피사체 스케일 조절
+                new_size = (int(fg.size[0] * scale), int(fg.size[1] * scale))
+                if new_size[0] > 0 and new_size[1] > 0:
+                    fg = fg.resize(new_size, PIL.Image.Resampling.LANCZOS)
+                
+                # 그림자 생성
+                from PIL import ImageFilter, ImageDraw, ImageFont
+                shadow = PIL.Image.new("RGBA", new_size, (0, 0, 0, 0))
+                shadow.paste((0, 0, 0, 180), (0, 0), mask=fg)
+                shadow = shadow.filter(ImageFilter.GaussianBlur(radius=int(max(new_size)*0.01)))
+                
+                # 피사체 위치 계산
+                cx = (bg.size[0] - new_size[0]) // 2 + offset_x
+                cy = (bg.size[1] - new_size[1]) // 2 + offset_y
+                shadow_y = cy + int(max(new_size)*0.02)
+                
+                # 합성 실행
+                bg.paste(shadow, (cx, shadow_y), mask=shadow)
+                bg.paste(fg, (cx, cy), mask=fg)
+                
+                # 글씨 추가 실행
+                if overlay_text.strip():
+                    draw = ImageDraw.Draw(bg)
+                    try:
+                        font = ImageFont.truetype("malgun.ttf", text_size)
+                    except:
+                        try:
+                            font = ImageFont.truetype("AppleGothic.ttf", text_size)
+                        except:
+                            font = ImageFont.load_default()
+                    
+                    try:
+                        bbox = draw.textbbox((0, 0), overlay_text, font=font)
+                        tw = bbox[2] - bbox[0]
+                    except:
+                        tw = text_size * len(overlay_text) * 0.5
+                        
+                    tx = (bg.size[0] - tw) // 2
+                    draw.text((tx, text_y), overlay_text, fill=text_color, font=font)
+                
+                # 결과물 저장 (UI가 즉시 재시작되며 158번째 줄에서 새 이미지를 로드함)
+                import io, base64
+                out_bytes = io.BytesIO()
+                bg.convert("RGB").save(out_bytes, format='PNG')
+                st.session_state.hero_ai_b64 = base64.b64encode(out_bytes.getvalue()).decode('utf-8')
+            except Exception as e:
+                st.error(f"편집 오류: {e}")
+
 col1, col2 = st.columns([1, 1])
 with col1:
     hero_file = st.file_uploader("🌟 대표 이미지 1장", accept_multiple_files=False, type=['jpg','png','jpeg'], key="hero_file_main", on_change=on_hero_change)
@@ -160,6 +249,10 @@ with col1:
         if st.button("❌ 원본 사진으로 복구", key="revert_hero"):
             on_hero_change()
             st.rerun()
+            
+        # [NEW] 에디터 호출
+        render_hero_editor()
+        
     elif hero_file:
         st.image(hero_file, width=450)
     elif st.session_state.get('loaded_hero_b64'):
@@ -278,6 +371,9 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                                 bg_img = bg_img.crop((left, 0, left + new_bg_w, bg_img.size[1]))
                                 
                             bg_img = bg_img.resize(fg_img.size, PIL.Image.Resampling.LANCZOS)
+                            
+                            st.session_state.hero_fg_img = fg_img.copy()
+                            st.session_state.hero_bg_img = bg_img.copy()
                             
                             # 그림자 생성 (원본 크기에 맞춤)
                             from PIL import ImageFilter
