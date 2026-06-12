@@ -232,31 +232,32 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             else:
                                 bg_img = PIL.Image.open(io.BytesIO(generated_bytes)).convert("RGBA")
                             
-                            # 3. 배경과 피사체 합성 (고급스러운 여백과 그림자 추가)
-                            bg_size = bg_img.size # AI 생성 배경(보통 1024x1024) 또는 수제 배경
+                            # 3. 배경을 원본 사진과 완전히 동일한 크기/비율로 맞추기
+                            fg_ratio = fg_img.size[0] / fg_img.size[1]
+                            bg_ratio = bg_img.size[0] / bg_img.size[1]
                             
-                            # 피사체 크기를 배경에 꽉 차게(100%) 키워서 시원하게 배치
-                            target_max = int(min(bg_size) * 1.0)
-                            scale = target_max / max(fg_img.size)
-                            new_size = (int(fg_img.size[0] * scale), int(fg_img.size[1] * scale))
-                            fg_img = fg_img.resize(new_size, PIL.Image.Resampling.LANCZOS)
+                            if fg_ratio > bg_ratio:
+                                new_bg_h = int(bg_img.size[0] / fg_ratio)
+                                top = (bg_img.size[1] - new_bg_h) // 2
+                                bg_img = bg_img.crop((0, top, bg_img.size[0], top + new_bg_h))
+                            else:
+                                new_bg_w = int(bg_img.size[1] * fg_ratio)
+                                left = (bg_img.size[0] - new_bg_w) // 2
+                                bg_img = bg_img.crop((left, 0, left + new_bg_w, bg_img.size[1]))
+                                
+                            bg_img = bg_img.resize(fg_img.size, PIL.Image.Resampling.LANCZOS)
                             
-                            # 그림자 생성
+                            # 그림자 생성 (원본 크기에 맞춤)
                             from PIL import ImageFilter
                             shadow = PIL.Image.new("RGBA", fg_img.size, (0, 0, 0, 0))
                             shadow.paste((0, 0, 0, 180), (0, 0), mask=fg_img)
-                            shadow = shadow.filter(ImageFilter.GaussianBlur(radius=int(max(new_size)*0.03)))
+                            shadow = shadow.filter(ImageFilter.GaussianBlur(radius=int(max(fg_img.size)*0.01)))
                             
-                            # 중앙 정렬 좌표 계산
-                            cx = (bg_size[0] - new_size[0]) // 2
-                            cy = (bg_size[1] - new_size[1]) // 2
+                            offset_y = int(max(fg_img.size)*0.02)
+                            bg_img.paste(shadow, (0, offset_y), mask=shadow)
                             
-                            # 그림자 위치를 약간 아래로
-                            offset_y = int(max(new_size)*0.05)
-                            bg_img.paste(shadow, (cx, cy + offset_y), mask=shadow)
-                            
-                            # 피사체 중앙에 얹기
-                            bg_img.paste(fg_img, (cx, cy), mask=fg_img)
+                            # 원본 피사체를 원래 위치 그대로(0,0) 합성
+                            bg_img.paste(fg_img, (0, 0), mask=fg_img)
                             
                             out_bytes = io.BytesIO()
                             bg_img.convert("RGB").save(out_bytes, format='PNG')
@@ -414,31 +415,32 @@ for i in range(5):
                                     else:
                                         bg_img = PIL.Image.open(io.BytesIO(generated_bytes)).convert("RGBA")
                                     
-                                    # 3. 배경과 피사체 합성 (고급스러운 여백과 그림자 추가)
-                                    bg_size = bg_img.size
+                                    # 3. 배경을 원본 사진과 완전히 동일한 크기/비율로 맞추기
+                                    fg_ratio = fg_img.size[0] / fg_img.size[1]
+                                    bg_ratio = bg_img.size[0] / bg_img.size[1]
                                     
-                                    # 피사체 크기를 배경에 꽉 차게(100%) 키움
-                                    target_max = int(min(bg_size) * 1.0)
-                                    scale = target_max / max(fg_img.size)
-                                    new_size = (int(fg_img.size[0] * scale), int(fg_img.size[1] * scale))
-                                    fg_img = fg_img.resize(new_size, PIL.Image.Resampling.LANCZOS)
+                                    if fg_ratio > bg_ratio:
+                                        new_bg_h = int(bg_img.size[0] / fg_ratio)
+                                        top = (bg_img.size[1] - new_bg_h) // 2
+                                        bg_img = bg_img.crop((0, top, bg_img.size[0], top + new_bg_h))
+                                    else:
+                                        new_bg_w = int(bg_img.size[1] * fg_ratio)
+                                        left = (bg_img.size[0] - new_bg_w) // 2
+                                        bg_img = bg_img.crop((left, 0, left + new_bg_w, bg_img.size[1]))
+                                        
+                                    bg_img = bg_img.resize(fg_img.size, PIL.Image.Resampling.LANCZOS)
                                     
-                                    # 그림자 생성
+                                    # 그림자 생성 (원본 크기에 맞춤)
                                     from PIL import ImageFilter
                                     shadow = PIL.Image.new("RGBA", fg_img.size, (0, 0, 0, 0))
                                     shadow.paste((0, 0, 0, 180), (0, 0), mask=fg_img)
-                                    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=int(max(new_size)*0.03)))
+                                    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=int(max(fg_img.size)*0.01)))
                                     
-                                    # 중앙 정렬 좌표 계산
-                                    cx = (bg_size[0] - new_size[0]) // 2
-                                    cy = (bg_size[1] - new_size[1]) // 2
+                                    offset_y = int(max(fg_img.size)*0.02)
+                                    bg_img.paste(shadow, (0, offset_y), mask=shadow)
                                     
-                                    # 그림자 위치를 약간 아래로
-                                    offset_y = int(max(new_size)*0.05)
-                                    bg_img.paste(shadow, (cx, cy + offset_y), mask=shadow)
-                                    
-                                    # 피사체 중앙에 얹기
-                                    bg_img.paste(fg_img, (cx, cy), mask=fg_img)
+                                    # 원본 피사체를 원래 위치 그대로(0,0) 합성
+                                    bg_img.paste(fg_img, (0, 0), mask=fg_img)
                                     
                                     out_bytes = io.BytesIO()
                                     bg_img.convert("RGB").save(out_bytes, format='PNG')
