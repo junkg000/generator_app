@@ -163,7 +163,7 @@ def render_editor(target_id="hero"):
             preview_container = st.empty()
             
         with main_col2:
-            tab1, tab2, tab3 = st.tabs(["🎯 피사체 조절", "🖼️ 배경 변경", "✍️ 글씨 오버레이"])
+            tab1, tab2, tab3, tab4 = st.tabs(["🎯 피사체 조절", "🖼️ 배경 변경", "✍️ 글씨 오버레이", "✨ 포스터 템플릿"])
             
             with tab1:
                 scale = st.slider("피사체 크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, key='edit_scale')
@@ -207,6 +207,28 @@ def render_editor(target_id="hero"):
                 text_x = st.slider("글씨 가로 위치 (좌우 이동)", -1000, 1000, 0, 10, key='edit_text_x')
                 text_y = st.slider("글씨 세로 위치 (상하 이동)", 0, 1500, 100, 10, key='edit_text_y')
                 text_color = st.color_picker("글씨 색상", "#FFFFFF", key='edit_color')
+                
+            with tab4:
+                st.markdown("**포스터 자동 완성 템플릿**")
+                use_template = st.toggle("템플릿 적용하기", value=False, key="tmpl_enable")
+                tmpl_color = st.color_picker("배너/포인트 색상", "#4A533E", key="tmpl_color")
+                tmpl_title = st.text_area("메인 타이틀", "프리미엄\n소나무붓\n4종 세트", key="tmpl_title")
+                tmpl_sub_top = st.text_input("상단 서브 타이틀", "한 붓의 차이가 작품의 품격을 만듭니다.", key="tmpl_sub_top")
+                tmpl_sub_bottom = st.text_input("하단 서브 타이틀", "전통의 깊이, 완성의 차이", key="tmpl_sub_bottom")
+                st.markdown("---")
+                col_t1, col_t2, col_t3 = st.columns(3)
+                with col_t1:
+                    tmpl_p1_icon = st.text_input("포인트 1 아이콘", "🎯", key="tmpl_p1_icon")
+                    tmpl_p1_title = st.text_input("포인트 1 제목", "정밀도 98%", key="tmpl_p1_title")
+                    tmpl_p1_desc = st.text_input("포인트 1 설명", "섬세한 표현력", key="tmpl_p1_desc")
+                with col_t2:
+                    tmpl_p2_icon = st.text_input("포인트 2 아이콘", "🖌️", key="tmpl_p2_icon")
+                    tmpl_p2_title = st.text_input("포인트 2 제목", "100% 수제 제작", key="tmpl_p2_title")
+                    tmpl_p2_desc = st.text_input("포인트 2 설명", "장인의 손길로 완성", key="tmpl_p2_desc")
+                with col_t3:
+                    tmpl_p3_icon = st.text_input("포인트 3 아이콘", "🌿", key="tmpl_p3_icon")
+                    tmpl_p3_title = st.text_input("포인트 3 제목", "천연 소나무 축", key="tmpl_p3_title")
+                    tmpl_p3_desc = st.text_input("포인트 3 설명", "가볍고 균형 잡힌 사용감", key="tmpl_p3_desc")
                 
             st.markdown("---")
             col_save1, col_save2 = st.columns([1, 1])
@@ -264,8 +286,78 @@ def render_editor(target_id="hero"):
             
             bg = PIL.Image.alpha_composite(bg, temp_layer)
             
-            if overlay_text.strip():
-                draw = ImageDraw.Draw(bg)
+            draw = ImageDraw.Draw(bg)
+            import os
+            
+            if use_template:
+                font_bold = "fonts/BlackHanSans-Regular.ttf" if os.path.exists("fonts/BlackHanSans-Regular.ttf") else "malgun.ttf"
+                font_regular = "fonts/NanumGothic-Regular.ttf" if os.path.exists("fonts/NanumGothic-Regular.ttf") else "malgun.ttf"
+                
+                # 1. 하단 배너 그리기 (이미지 하단 16%)
+                banner_h = int(bg.size[1] * 0.16)
+                banner_y = bg.size[1] - banner_h
+                draw.rectangle([0, banner_y, bg.size[0], bg.size[1]], fill=tmpl_color)
+                
+                # 배너 내용 (3등분)
+                try:
+                    f_icon = ImageFont.truetype("seguiemj.ttf", int(banner_h * 0.4))
+                except:
+                    f_icon = ImageFont.truetype(font_regular, int(banner_h * 0.4))
+                    
+                f_p_title = ImageFont.truetype(font_bold, int(banner_h * 0.18))
+                f_p_desc = ImageFont.truetype(font_regular, int(banner_h * 0.12))
+                
+                col_w = bg.size[0] // 3
+                points = [
+                    (tmpl_p1_icon, tmpl_p1_title, tmpl_p1_desc),
+                    (tmpl_p2_icon, tmpl_p2_title, tmpl_p2_desc),
+                    (tmpl_p3_icon, tmpl_p3_title, tmpl_p3_desc)
+                ]
+                
+                for idx, (icon, title, desc) in enumerate(points):
+                    cx = idx * col_w + (col_w // 2)
+                    icon_x = cx - int(col_w * 0.25)
+                    text_x = cx - int(col_w * 0.05)
+                    
+                    try:
+                        draw.text((icon_x, banner_y + banner_h*0.5), icon, font=f_icon, fill="white", anchor="mm")
+                    except:
+                        draw.text((icon_x, banner_y + banner_h*0.3), icon, font=f_icon, fill="white")
+                    
+                    try:
+                        draw.text((text_x, banner_y + banner_h*0.35), title, font=f_p_title, fill="white", anchor="lm")
+                        draw.text((text_x, banner_y + banner_h*0.65), desc, font=f_p_desc, fill="#DDDDDD", anchor="lm")
+                    except:
+                        draw.text((text_x, banner_y + banner_h*0.25), title, font=f_p_title, fill="white")
+                        draw.text((text_x, banner_y + banner_h*0.55), desc, font=f_p_desc, fill="#DDDDDD")
+                    
+                # 2. 좌측 상단 타이틀 렌더링
+                title_x = int(bg.size[0] * 0.08)
+                title_y = int(bg.size[1] * 0.15)
+                
+                f_sub = ImageFont.truetype(font_bold, int(bg.size[0] * 0.035))
+                f_main = ImageFont.truetype(font_bold, int(bg.size[0] * 0.09))
+                
+                draw.text((title_x, title_y), tmpl_sub_top, font=f_sub, fill="#222222")
+                
+                lines = tmpl_title.split("\n")
+                curr_y = title_y + int(bg.size[1] * 0.05)
+                for idx, line in enumerate(lines):
+                    try:
+                        bbox = draw.textbbox((title_x, curr_y), line, font=f_main)
+                    except:
+                        bbox = (title_x, curr_y, title_x + int(bg.size[0]*0.4), curr_y + int(bg.size[1]*0.08))
+                        
+                    if idx % 2 == 1:
+                        draw.rectangle([bbox[0]-10, bbox[1]-5, bbox[2]+10, bbox[3]+15], fill=tmpl_color)
+                        draw.text((title_x, curr_y), line, font=f_main, fill="white")
+                    else:
+                        draw.text((title_x, curr_y), line, font=f_main, fill="#222222")
+                    curr_y += int(bg.size[1] * 0.1)
+                    
+                draw.text((title_x, curr_y + int(bg.size[1] * 0.02)), tmpl_sub_bottom, font=f_sub, fill="#333333")
+
+            elif overlay_text.strip():
                 
                 font_map = {
                     "나눔고딕": {"보통": "fonts/NanumGothic-Regular.ttf", "굵게": "fonts/NanumGothic-Bold.ttf"},
@@ -273,7 +365,6 @@ def render_editor(target_id="hero"):
                     "검은고딕 (매우 굵음)": {"보통": "fonts/BlackHanSans-Regular.ttf", "굵게": "fonts/BlackHanSans-Regular.ttf"}
                 }
                 
-                import os
                 font_path = font_map.get(font_family, {}).get(font_weight, "malgun.ttf")
                 if not os.path.exists(font_path):
                     font_path = "malgun.ttf"
