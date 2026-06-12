@@ -175,6 +175,7 @@ def render_hero_editor():
                 
                 bg_upload = None
                 use_solid_bg = False
+                ai_bg_index = 0
                 
                 if bg_type == "직접 이미지 업로드":
                     bg_upload = st.file_uploader("배경 사진 직접 업로드", type=['png','jpg','jpeg'], key='edit_bg_file')
@@ -182,8 +183,12 @@ def render_hero_editor():
                     use_solid_bg = True
                     bg_color = st.color_picker("단색 배경 색상 선택", "#000000", key='edit_bg_color')
                 else:
-                    # 기존 AI 배경 유지 시 더미 변수
                     bg_color = "#000000"
+                    if 'hero_ai_bg_candidates' in st.session_state and len(st.session_state.hero_ai_bg_candidates) > 0:
+                        theme_names = ["1. 다크 스튜디오", "2. 밝은 대리석", "3. 골드 & 베이지", "4. 파스텔 기하학"]
+                        opts = theme_names[:len(st.session_state.hero_ai_bg_candidates)]
+                        selected_theme = st.selectbox("✨ 4가지 AI 배경 중 선택", opts, key='edit_ai_bg_idx')
+                        ai_bg_index = opts.index(selected_theme)
                 
             with tab3:
                 overlay_text = st.text_input("삽입할 문구", "", key='edit_text')
@@ -213,6 +218,11 @@ def render_hero_editor():
                 bg = bg.resize(st.session_state.hero_bg_img.size, PIL.Image.Resampling.LANCZOS)
             elif use_solid_bg:
                 bg = PIL.Image.new("RGBA", bg.size, bg_color)
+            else:
+                if 'hero_ai_bg_candidates' in st.session_state and len(st.session_state.hero_ai_bg_candidates) > ai_bg_index:
+                    bg = PIL.Image.open(io.BytesIO(st.session_state.hero_ai_bg_candidates[ai_bg_index])).convert("RGBA")
+                    # 배경을 기존 캔버스 사이즈에 맞춤 (안전장치)
+                    bg = bg.resize(st.session_state.hero_bg_img.size, PIL.Image.Resampling.LANCZOS)
             
             new_size = (int(fg.size[0] * scale), int(fg.size[1] * scale))
             if new_size[0] > 0 and new_size[1] > 0:
@@ -362,7 +372,7 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
             if not api_key:
                 st.error("👈 좌측 사이드바에 API 키를 입력해주세요!")
             else:
-                with st.spinner("AI가 고퀄리티 사진을 생성 중입니다... (약 10~20초 소요) 🎨"):
+                with st.spinner("AI가 4가지 테마의 고급 배경을 생성 중입니다... (약 10~20초 소요) 🎨"):
                     try:
                         genai.configure(api_key=api_key)
                         if hero_file:
@@ -380,25 +390,43 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
                             fg_img = remove_small_noise(fg_img)
                             
-                            # 2. 고급 배경 AI 생성 (피사체 없이 배경만)
-                            bg_prompt = "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text."
+                            # 2. 고급 배경 AI 생성 (4가지 테마)
+                            bg_prompts = [
+                                "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text.",
+                                "A bright and airy minimalist studio background with soft natural morning light and gentle shadows, pure white marble surface, 8k resolution, completely empty, no text.",
+                                "A luxurious warm gold and beige studio background, soft bokeh, high-end product photography style, completely empty, 8k resolution, no text.",
+                                "A modern abstract geometric background in pastel tones, soft lighting, 3d render style, completely empty, perfect for product placement, no text."
+                            ]
                             model = genai.GenerativeModel('models/gemini-2.5-flash-image')
-                            response = model.generate_content(bg_prompt)
                             
-                            generated_bytes = response.candidates[0].content.parts[0].inline_data.data
-                            if not generated_bytes:
-                                # 필터링 당하면 에러 대신, 파이썬 코드로 직접 럭셔리한 스튜디오 조명 배경을 그립니다.
+                            generated_bgs = []
+                            for p in bg_prompts:
+                                try:
+                                    response = model.generate_content(p)
+                                    b_data = response.candidates[0].content.parts[0].inline_data.data
+                                    if b_data:
+                                        generated_bgs.append(b_data)
+                                except Exception:
+                                    continue
+                            
+                            if not generated_bgs:
+                                # 필터링 당하거나 에러 발생 시, 파이썬 코드로 직접 럭셔리한 스튜디오 조명 배경을 그립니다.
                                 from PIL import ImageDraw, ImageFilter
-                                bg_img = PIL.Image.new("RGBA", fg_img.size, (15, 15, 18, 255))
-                                draw = ImageDraw.Draw(bg_img)
+                                fallback_bg = PIL.Image.new("RGBA", fg_img.size, (15, 15, 18, 255))
+                                draw = ImageDraw.Draw(fallback_bg)
                                 for y in range(fg_img.size[1]):
                                     ratio = y / fg_img.size[1]
                                     r = int(58 - (58 - 13) * ratio)
                                     g = int(62 - (62 - 14) * ratio)
                                     b = int(71 - (71 - 17) * ratio)
                                     draw.line([(0, y), (fg_img.size[0], y)], fill=(r, g, b, 255))
-                            else:
-                                bg_img = PIL.Image.open(io.BytesIO(generated_bytes)).convert("RGBA")
+                                import io
+                                out_b = io.BytesIO()
+                                fallback_bg.save(out_b, format='PNG')
+                                generated_bgs.append(out_b.getvalue())
+                                
+                            st.session_state.hero_ai_bg_candidates = generated_bgs
+                            bg_img = PIL.Image.open(io.BytesIO(generated_bgs[0])).convert("RGBA")
                             
                             # 3. 배경을 원본 사진과 완전히 동일한 크기/비율로 맞추기
                             fg_ratio = fg_img.size[0] / fg_img.size[1]
