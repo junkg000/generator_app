@@ -124,16 +124,16 @@ with col1:
     hero_file = st.file_uploader("🌟 대표 이미지 1장", accept_multiple_files=False, type=['jpg','png','jpeg'], key="hero_file_main", on_change=on_hero_change)
     if st.session_state.get('hero_ai_b64'):
         import base64
-        st.image(base64.b64decode(st.session_state.hero_ai_b64), width=700)
+        st.image(base64.b64decode(st.session_state.hero_ai_b64), width=450)
         st.success("✨ AI 고퀄리티 사진이 적용되었습니다!")
         if st.button("❌ 원본 사진으로 복구", key="revert_hero"):
             on_hero_change()
             st.rerun()
     elif hero_file:
-        st.image(hero_file, width=700)
+        st.image(hero_file, width=450)
     elif st.session_state.get('loaded_hero_b64'):
         import base64
-        st.image(base64.b64decode(st.session_state.loaded_hero_b64), width=700)
+        st.image(base64.b64decode(st.session_state.loaded_hero_b64), width=450)
         st.info("✅ AI 생성/보관함 이미지가 대기 중입니다.")
 with col2:
     search_kw_default = st.session_state.get('loaded_search_kw', "")
@@ -310,16 +310,16 @@ for i in range(5):
             ai_info = st.session_state.story_ai_blocks[i]
             if ai_info and ai_info.get('b64'):
                 import base64
-                st.image(base64.b64decode(ai_info['b64']), width=700)
+                st.image(base64.b64decode(ai_info['b64']), width=450)
                 st.success("✨ AI 사진 적용됨")
                 if st.button("❌ 원본 복구", key=f"rev_{i}"):
                     clear_story_ai(i)
                     st.rerun()
             elif f:
-                st.image(f, width=700)
+                st.image(f, width=450)
             elif loaded_b64:
                 import base64
-                st.image(base64.b64decode(loaded_b64), width=700)
+                st.image(base64.b64decode(loaded_b64), width=450)
                 st.info("✅ 보관함/AI 이미지 대기 중")
             
             ai_b64 = ai_info['b64'] if ai_info else None
