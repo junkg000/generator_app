@@ -392,7 +392,7 @@ for i in range(5):
                                     from rembg import remove
                                     img_byte_arr = io.BytesIO()
                                     img.save(img_byte_arr, format='PNG')
-                                    fg_bytes = remove(img_byte_arr.getvalue())
+                                    fg_bytes = remove(img_byte_arr.getvalue(), post_process_mask=True, alpha_matting=True)
                                     fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
                                     
                                     # 2. 고급 배경 AI 생성 (피사체 없이 배경만)
