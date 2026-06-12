@@ -449,14 +449,21 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             model = genai.GenerativeModel('models/gemini-2.5-flash-image')
                             
                             generated_bgs = []
-                            for p in bg_prompts:
+                            import concurrent.futures
+                            
+                            def generate_single_bg(prompt):
                                 try:
-                                    response = model.generate_content(p)
-                                    b_data = response.candidates[0].content.parts[0].inline_data.data
-                                    if b_data:
-                                        generated_bgs.append(b_data)
+                                    res = model.generate_content(prompt)
+                                    return res.candidates[0].content.parts[0].inline_data.data
                                 except Exception:
-                                    continue
+                                    return None
+                                    
+                            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                                results = executor.map(generate_single_bg, bg_prompts)
+                                
+                            for b_data in results:
+                                if b_data:
+                                    generated_bgs.append(b_data)
                             
                             # 항상 4개의 배경을 보장 (API 필터링/에러 대비 파이썬 직접 렌더링)
                             from PIL import ImageDraw
