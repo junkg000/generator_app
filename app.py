@@ -282,6 +282,22 @@ with col1:
         
     elif hero_file:
         st.image(hero_file, width=450)
+        if st.button("⚡ AI 없이 바로 편집하기 (새창)", type="secondary"):
+            with st.spinner("이미지 준비 중 (누끼 제거)... ✂️"):
+                import io, PIL.Image
+                from rembg import remove
+                
+                img_bytes = hero_file.getvalue()
+                fg_bytes = remove(img_bytes, session=get_rembg_session(), post_process_mask=True, alpha_matting=True)
+                fg = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
+                
+                # 기본 배경은 투명으로 설정 (나중에 단색/이미지로 변경 가능)
+                bg = PIL.Image.new("RGBA", fg.size, (255, 255, 255, 0))
+                
+                st.session_state.hero_fg_img = fg
+                st.session_state.hero_bg_img = bg
+                st.session_state.hero_ai_b64 = None # 초기화
+            render_hero_editor()
     elif st.session_state.get('loaded_hero_b64'):
         import base64
         st.image(base64.b64decode(st.session_state.loaded_hero_b64), width=450)
