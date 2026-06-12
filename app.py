@@ -124,16 +124,16 @@ with col1:
     hero_file = st.file_uploader("🌟 대표 이미지 1장", accept_multiple_files=False, type=['jpg','png','jpeg'], key="hero_file_main", on_change=on_hero_change)
     if st.session_state.get('hero_ai_b64'):
         import base64
-        st.image(base64.b64decode(st.session_state.hero_ai_b64), use_container_width=True)
+        st.image(base64.b64decode(st.session_state.hero_ai_b64), width=500)
         st.success("✨ AI 고퀄리티 사진이 적용되었습니다!")
         if st.button("❌ 원본 사진으로 복구", key="revert_hero"):
             on_hero_change()
             st.rerun()
     elif hero_file:
-        st.image(hero_file, use_container_width=True)
+        st.image(hero_file, width=500)
     elif st.session_state.get('loaded_hero_b64'):
         import base64
-        st.image(base64.b64decode(st.session_state.loaded_hero_b64), use_container_width=True)
+        st.image(base64.b64decode(st.session_state.loaded_hero_b64), width=500)
         st.info("✅ AI 생성/보관함 이미지가 대기 중입니다.")
 with col2:
     search_kw_default = st.session_state.get('loaded_search_kw', "")
@@ -204,12 +204,67 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             import base64
                             img = PIL.Image.open(io.BytesIO(base64.b64decode(st.session_state.loaded_hero_b64)))
                         
-                        prompt = "원본 사진은 피사체의 대략적인 형태와 종류만 참고하세요. 기존의 배경, 질감, 저화질 요소는 모두 버리고, [완전히 새로운 럭셔리 명품 광고 화보]를 창조해 주세요. 최고급 스튜디오 조명, 8K 초고해상도, 극강의 디테일, 깔끔하고 우아한 배경(대리석, 벨벳 등), 전문 포토그래퍼가 촬영한 압도적으로 고급스러운 분위기의 제품 사진을 만들어야 합니다."
-                        model = genai.GenerativeModel('models/gemini-2.5-flash-image')
-                        response = model.generate_content([prompt, img])
-                        
-                        generated_bytes = response.candidates[0].content.parts[0].inline_data.data
-                        mime_type = response.candidates[0].content.parts[0].inline_data.mime_type
+                        try:
+                            # 1. 원본 피사체 배경 제거 (rembg)
+                            from rembg import remove
+                            img_byte_arr = io.BytesIO()
+                            img.save(img_byte_arr, format='PNG')
+                            fg_bytes = remove(img_byte_arr.getvalue())
+                            fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
+                            
+                            # 2. 고급 배경 AI 생성 (피사체 없이 배경만)
+                            bg_prompt = "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text."
+                            model = genai.GenerativeModel('models/gemini-2.5-flash-image')
+                            response = model.generate_content(bg_prompt)
+                            
+                            generated_bytes = response.candidates[0].content.parts[0].inline_data.data
+                            if not generated_bytes:
+                                # 필터링 당하면 에러 대신, 파이썬 코드로 직접 럭셔리한 스튜디오 조명 배경을 그립니다.
+                                from PIL import ImageDraw, ImageFilter
+                                bg_img = PIL.Image.new("RGBA", fg_img.size, (15, 15, 18, 255))
+                                draw = ImageDraw.Draw(bg_img)
+                                for y in range(fg_img.size[1]):
+                                    ratio = y / fg_img.size[1]
+                                    r = int(58 - (58 - 13) * ratio)
+                                    g = int(62 - (62 - 14) * ratio)
+                                    b = int(71 - (71 - 17) * ratio)
+                                    draw.line([(0, y), (fg_img.size[0], y)], fill=(r, g, b, 255))
+                            else:
+                                bg_img = PIL.Image.open(io.BytesIO(generated_bytes)).convert("RGBA")
+                            
+                            # 3. 배경과 피사체 합성 (고급스러운 여백과 그림자 추가)
+                            bg_size = bg_img.size # AI 생성 배경(보통 1024x1024) 또는 수제 배경
+                            
+                            # 피사체 크기를 배경의 90%로 줄여서 적절한 여백 확보
+                            target_max = int(min(bg_size) * 0.9)
+                            scale = target_max / max(fg_img.size)
+                            new_size = (int(fg_img.size[0] * scale), int(fg_img.size[1] * scale))
+                            fg_img = fg_img.resize(new_size, PIL.Image.Resampling.LANCZOS)
+                            
+                            # 그림자 생성
+                            from PIL import ImageFilter
+                            shadow = PIL.Image.new("RGBA", fg_img.size, (0, 0, 0, 0))
+                            shadow.paste((0, 0, 0, 180), (0, 0), mask=fg_img)
+                            shadow = shadow.filter(ImageFilter.GaussianBlur(radius=int(max(new_size)*0.03)))
+                            
+                            # 중앙 정렬 좌표 계산
+                            cx = (bg_size[0] - new_size[0]) // 2
+                            cy = (bg_size[1] - new_size[1]) // 2
+                            
+                            # 그림자 위치를 약간 아래로
+                            offset_y = int(max(new_size)*0.05)
+                            bg_img.paste(shadow, (cx, cy + offset_y), mask=shadow)
+                            
+                            # 피사체 중앙에 얹기
+                            bg_img.paste(fg_img, (cx, cy), mask=fg_img)
+                            
+                            out_bytes = io.BytesIO()
+                            bg_img.convert("RGB").save(out_bytes, format='PNG')
+                            generated_bytes = out_bytes.getvalue()
+                            mime_type = "image/png"
+                        except Exception as e:
+                            st.error(f"합성 오류: {e}")
+                            st.stop()
                         import base64
                         st.session_state.hero_ai_b64 = base64.b64encode(generated_bytes).decode('utf-8')
                         st.session_state.hero_ai_mime = mime_type
@@ -255,16 +310,16 @@ for i in range(5):
             ai_info = st.session_state.story_ai_blocks[i]
             if ai_info and ai_info.get('b64'):
                 import base64
-                st.image(base64.b64decode(ai_info['b64']), use_container_width=True)
+                st.image(base64.b64decode(ai_info['b64']), width=500)
                 st.success("✨ AI 사진 적용됨")
                 if st.button("❌ 원본 복구", key=f"rev_{i}"):
                     clear_story_ai(i)
                     st.rerun()
             elif f:
-                st.image(f, use_container_width=True)
+                st.image(f, width=500)
             elif loaded_b64:
                 import base64
-                st.image(base64.b64decode(loaded_b64), use_container_width=True)
+                st.image(base64.b64decode(loaded_b64), width=500)
                 st.info("✅ 보관함/AI 이미지 대기 중")
             
             ai_b64 = ai_info['b64'] if ai_info else None
@@ -331,12 +386,67 @@ for i in range(5):
                                     import base64
                                     img = PIL.Image.open(io.BytesIO(base64.b64decode(loaded_b64)))
                                 
-                                prompt = "원본 사진은 피사체의 대략적인 형태와 종류만 참고하세요. 기존의 배경, 질감, 저화질 요소는 모두 버리고, [완전히 새로운 럭셔리 명품 광고 화보]를 창조해 주세요. 최고급 스튜디오 조명, 8K 초고해상도, 극강의 디테일, 깔끔하고 우아한 배경(대리석, 벨벳 등), 전문 포토그래퍼가 촬영한 압도적으로 고급스러운 분위기의 제품 사진을 만들어야 합니다."
-                                model = genai.GenerativeModel('models/gemini-2.5-flash-image')
-                                response = model.generate_content([prompt, img])
-                                
-                                generated_bytes = response.candidates[0].content.parts[0].inline_data.data
-                                mime_type = response.candidates[0].content.parts[0].inline_data.mime_type
+                                try:
+                                    # 1. 원본 피사체 배경 제거 (rembg)
+                                    from rembg import remove
+                                    img_byte_arr = io.BytesIO()
+                                    img.save(img_byte_arr, format='PNG')
+                                    fg_bytes = remove(img_byte_arr.getvalue())
+                                    fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
+                                    
+                                    # 2. 고급 배경 AI 생성 (피사체 없이 배경만)
+                                    bg_prompt = "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text."
+                                    model = genai.GenerativeModel('models/gemini-2.5-flash-image')
+                                    response = model.generate_content(bg_prompt)
+                                    
+                                    generated_bytes = response.candidates[0].content.parts[0].inline_data.data
+                                    if not generated_bytes:
+                                        # 필터링 당하면 에러 대신 고급스러운 수제 그라데이션 배경 사용
+                                        from PIL import ImageDraw, ImageFilter
+                                        bg_img = PIL.Image.new("RGBA", fg_img.size, (15, 15, 18, 255))
+                                        draw = ImageDraw.Draw(bg_img)
+                                        for y in range(fg_img.size[1]):
+                                            ratio = y / fg_img.size[1]
+                                            r = int(58 - (58 - 13) * ratio)
+                                            g = int(62 - (62 - 14) * ratio)
+                                            b = int(71 - (71 - 17) * ratio)
+                                            draw.line([(0, y), (fg_img.size[0], y)], fill=(r, g, b, 255))
+                                    else:
+                                        bg_img = PIL.Image.open(io.BytesIO(generated_bytes)).convert("RGBA")
+                                    
+                                    # 3. 배경과 피사체 합성 (고급스러운 여백과 그림자 추가)
+                                    bg_size = bg_img.size
+                                    
+                                    # 피사체 크기를 배경의 90%로 줄여서 여백 확보
+                                    target_max = int(min(bg_size) * 0.9)
+                                    scale = target_max / max(fg_img.size)
+                                    new_size = (int(fg_img.size[0] * scale), int(fg_img.size[1] * scale))
+                                    fg_img = fg_img.resize(new_size, PIL.Image.Resampling.LANCZOS)
+                                    
+                                    # 그림자 생성
+                                    from PIL import ImageFilter
+                                    shadow = PIL.Image.new("RGBA", fg_img.size, (0, 0, 0, 0))
+                                    shadow.paste((0, 0, 0, 180), (0, 0), mask=fg_img)
+                                    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=int(max(new_size)*0.03)))
+                                    
+                                    # 중앙 정렬 좌표 계산
+                                    cx = (bg_size[0] - new_size[0]) // 2
+                                    cy = (bg_size[1] - new_size[1]) // 2
+                                    
+                                    # 그림자 위치를 약간 아래로
+                                    offset_y = int(max(new_size)*0.05)
+                                    bg_img.paste(shadow, (cx, cy + offset_y), mask=shadow)
+                                    
+                                    # 피사체 중앙에 얹기
+                                    bg_img.paste(fg_img, (cx, cy), mask=fg_img)
+                                    
+                                    out_bytes = io.BytesIO()
+                                    bg_img.convert("RGB").save(out_bytes, format='PNG')
+                                    generated_bytes = out_bytes.getvalue()
+                                    mime_type = "image/png"
+                                except Exception as e:
+                                    st.error(f"합성 오류: {e}")
+                                    st.stop()
                                 
                                 import base64
                                 st.session_state.story_ai_blocks[i] = {'b64': base64.b64encode(generated_bytes).decode('utf-8'), 'mime': mime_type}
