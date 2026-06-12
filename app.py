@@ -182,23 +182,23 @@ def render_hero_editor():
             
         # 실시간 재합성 로직
         try:
+            import PIL.Image
+            from PIL import ImageFilter, ImageDraw, ImageFont
+            import io, base64
+            
             fg = st.session_state.hero_fg_img.copy()
             bg = st.session_state.hero_bg_img.copy()
             
             if bg_upload is not None:
-                import io
-                import PIL.Image
                 bg = PIL.Image.open(io.BytesIO(bg_upload.getvalue())).convert("RGBA")
                 bg = bg.resize(st.session_state.hero_bg_img.size, PIL.Image.Resampling.LANCZOS)
             elif use_solid_bg:
-                import PIL.Image
                 bg = PIL.Image.new("RGBA", bg.size, bg_color)
             
             new_size = (int(fg.size[0] * scale), int(fg.size[1] * scale))
             if new_size[0] > 0 and new_size[1] > 0:
                 fg = fg.resize(new_size, PIL.Image.Resampling.LANCZOS)
             
-            from PIL import ImageFilter, ImageDraw, ImageFont
             shadow = PIL.Image.new("RGBA", new_size, (0, 0, 0, 0))
             shadow.paste((0, 0, 0, 180), (0, 0), mask=fg)
             shadow = shadow.filter(ImageFilter.GaussianBlur(radius=int(max(new_size)*0.01)))
@@ -229,7 +229,6 @@ def render_hero_editor():
                 tx = (bg.size[0] - tw) // 2
                 draw.text((tx, text_y), overlay_text, fill=text_color, font=font)
             
-            import io, base64
             out_bytes = io.BytesIO()
             bg.convert("RGB").save(out_bytes, format='PNG')
             encoded = base64.b64encode(out_bytes.getvalue()).decode('utf-8')
