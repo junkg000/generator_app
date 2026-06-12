@@ -13,7 +13,7 @@ st.set_page_config(page_title="프리미엄 상세페이지 생성기", layout="
 @st.cache_resource
 def get_rembg_session():
     from rembg import new_session
-    return new_session('isnet-general-use')
+    return new_session('u2net')
 
 def remove_small_noise(img):
     try:
@@ -166,9 +166,10 @@ def render_hero_editor():
             tab1, tab2, tab3 = st.tabs(["🎯 피사체 조절", "🖼️ 배경 변경", "✍️ 글씨 오버레이"])
             
             with tab1:
-                scale = st.slider("크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, key='edit_scale')
+                scale = st.slider("피사체 크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, key='edit_scale')
                 offset_x = st.slider("가로 위치 (X)", -1000, 1000, 0, 10, key='edit_x')
                 offset_y = st.slider("세로 위치 (Y)", -1000, 1000, 0, 10, key='edit_y')
+                erode_size = st.slider("테두리 색번짐 제거 (픽셀 깎기)", 0, 10, 0, 1, key='edit_erode')
                 
             with tab2:
                 bg_type = st.radio("배경 설정 방식", ["기존 AI 배경 유지", "단색 배경 적용", "직접 이미지 업로드"], horizontal=True, key="edit_bg_type")
@@ -212,6 +213,17 @@ def render_hero_editor():
             
             fg = st.session_state.hero_fg_img.copy()
             bg = st.session_state.hero_bg_img.copy()
+            
+            if erode_size > 0:
+                import cv2
+                import numpy as np
+                arr = np.array(fg)
+                alpha = arr[:, :, 3]
+                kernel = np.ones((erode_size, erode_size), np.uint8)
+                alpha = cv2.erode(alpha, kernel, iterations=1)
+                alpha = cv2.GaussianBlur(alpha, (3, 3), 0)
+                arr[:, :, 3] = alpha
+                fg = PIL.Image.fromarray(arr)
             
             if bg_upload is not None:
                 bg = PIL.Image.open(io.BytesIO(bg_upload.getvalue())).convert("RGBA")
