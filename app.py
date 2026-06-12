@@ -118,11 +118,21 @@ if os.path.exists(api_key_file):
         saved_key = f.read().strip()
 
 api_key = st.sidebar.text_input("Gemini API Key 입력", type="password", value=saved_key)
-if st.sidebar.button("내 컴퓨터에 키 영구 저장하기"):
-    if api_key:
-        with open(api_key_file, "w") as f:
-            f.write(api_key)
-        st.sidebar.success("API 키 저장 완료!")
+col_k1, col_k2 = st.sidebar.columns(2)
+with col_k1:
+    if st.button("내 컴퓨터에 영구 저장", use_container_width=True):
+        if api_key:
+            with open(api_key_file, "w") as f:
+                f.write(api_key)
+            st.sidebar.success("저장 완료!")
+with col_k2:
+    if st.button("저장된 키 삭제", use_container_width=True):
+        if os.path.exists(api_key_file):
+            os.remove(api_key_file)
+        st.sidebar.success("삭제 완료!")
+        import time
+        time.sleep(0.5)
+        st.rerun()
 
 st.sidebar.markdown("---")
 st.sidebar.header("📁 보관함 (저장된 제품)")
