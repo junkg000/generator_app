@@ -193,6 +193,16 @@ def render_hero_editor():
                 
             with tab3:
                 overlay_text = st.text_input("삽입할 문구", "", key='edit_text')
+                
+                col_f1, col_f2 = st.columns(2)
+                with col_f1:
+                    font_family = st.selectbox("글꼴", ["나눔고딕", "나눔명조", "검은고딕 (매우 굵음)"], key='edit_font')
+                with col_f2:
+                    if font_family == "검은고딕 (매우 굵음)":
+                        font_weight = st.selectbox("굵기", ["보통"], key='edit_weight')
+                    else:
+                        font_weight = st.selectbox("굵기", ["보통", "굵게"], key='edit_weight')
+                        
                 text_size = st.slider("글씨 크기", 10, 300, 80, 5, key='edit_text_size')
                 text_x = st.slider("글씨 가로 위치 (좌우 이동)", -1000, 1000, 0, 10, key='edit_text_x')
                 text_y = st.slider("글씨 세로 위치 (상하 이동)", 0, 1500, 100, 10, key='edit_text_y')
@@ -256,13 +266,28 @@ def render_hero_editor():
             
             if overlay_text.strip():
                 draw = ImageDraw.Draw(bg)
+                
+                font_map = {
+                    "나눔고딕": {"보통": "fonts/NanumGothic-Regular.ttf", "굵게": "fonts/NanumGothic-Bold.ttf"},
+                    "나눔명조": {"보통": "fonts/NanumMyeongjo-Regular.ttf", "굵게": "fonts/NanumMyeongjo-Bold.ttf"},
+                    "검은고딕 (매우 굵음)": {"보통": "fonts/BlackHanSans-Regular.ttf", "굵게": "fonts/BlackHanSans-Regular.ttf"}
+                }
+                
+                import os
+                font_path = font_map.get(font_family, {}).get(font_weight, "malgun.ttf")
+                if not os.path.exists(font_path):
+                    font_path = "malgun.ttf"
+                    
                 try:
-                    font = ImageFont.truetype("malgun.ttf", text_size)
+                    font = ImageFont.truetype(font_path, text_size)
                 except:
                     try:
-                        font = ImageFont.truetype("AppleGothic.ttf", text_size)
+                        font = ImageFont.truetype("malgun.ttf", text_size)
                     except:
-                        font = ImageFont.load_default()
+                        try:
+                            font = ImageFont.truetype("AppleGothic.ttf", text_size)
+                        except:
+                            font = ImageFont.load_default()
                 
                 try:
                     bbox = draw.textbbox((0, 0), overlay_text, font=font)
