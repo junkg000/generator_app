@@ -155,30 +155,38 @@ def render_hero_editor():
     if 'hero_fg_img' in st.session_state and 'hero_bg_img' in st.session_state:
         st.markdown("**[조작 방법]** 슬라이더나 텍스트를 변경하면 아래 결과 이미지가 실시간으로 업데이트됩니다.")
         
-        # 미리보기 이미지를 그릴 공간 (위쪽)
-        preview_container = st.empty()
+        # 레이아웃 2분할 (좌: 미리보기, 우: 컨트롤러)
+        main_col1, main_col2 = st.columns([1, 1.2])
         
-        # 레이아웃 3분할 (아래쪽 컨트롤러)
-        col_a, col_b, col_c = st.columns(3)
-        
-        with col_a:
-            st.markdown("**1. 피사체 조절**")
-            scale = st.slider("크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, key='edit_scale')
-            offset_x = st.slider("가로 위치 (X)", -1000, 1000, 0, 10, key='edit_x')
-            offset_y = st.slider("세로 위치 (Y)", -1000, 1000, 0, 10, key='edit_y')
+        with main_col1:
+            # 미리보기 이미지를 그릴 공간
+            preview_container = st.empty()
             
-        with col_b:
-            st.markdown("**2. 배경 변경**")
-            bg_upload = st.file_uploader("배경 사진 직접 업로드", type=['png','jpg','jpeg'], key='edit_bg_file')
-            use_solid_bg = st.checkbox("단색 배경 사용하기", value=False, key='edit_use_solid')
-            bg_color = st.color_picker("단색 배경 색상", "#000000", key='edit_bg_color')
+        with main_col2:
+            tab1, tab2, tab3 = st.tabs(["🎯 피사체 조절", "🖼️ 배경 변경", "✍️ 글씨 오버레이"])
             
-        with col_c:
-            st.markdown("**3. 글씨 오버레이**")
-            overlay_text = st.text_input("삽입할 문구", "", key='edit_text')
-            text_size = st.slider("글씨 크기", 10, 300, 80, 5, key='edit_text_size')
-            text_y = st.slider("글씨 세로 위치", 0, 1500, 100, 10, key='edit_text_y')
-            text_color = st.color_picker("글씨 색상", "#FFFFFF", key='edit_color')
+            with tab1:
+                scale = st.slider("크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, key='edit_scale')
+                offset_x = st.slider("가로 위치 (X)", -1000, 1000, 0, 10, key='edit_x')
+                offset_y = st.slider("세로 위치 (Y)", -1000, 1000, 0, 10, key='edit_y')
+                
+            with tab2:
+                bg_upload = st.file_uploader("배경 사진 직접 업로드", type=['png','jpg','jpeg'], key='edit_bg_file')
+                use_solid_bg = st.checkbox("단색 배경 사용하기", value=False, key='edit_use_solid')
+                bg_color = st.color_picker("단색 배경 색상", "#000000", key='edit_bg_color')
+                
+            with tab3:
+                overlay_text = st.text_input("삽입할 문구", "", key='edit_text')
+                text_size = st.slider("글씨 크기", 10, 300, 80, 5, key='edit_text_size')
+                text_y = st.slider("글씨 세로 위치", 0, 1500, 100, 10, key='edit_text_y')
+                text_color = st.color_picker("글씨 색상", "#FFFFFF", key='edit_color')
+                
+            st.markdown("---")
+            col_save1, col_save2 = st.columns([1, 1])
+            with col_save1:
+                save_btn = st.button("✔️ 이대로 적용하기", type="primary", use_container_width=True)
+            with col_save2:
+                cancel_btn = st.button("❌ 취소 (창 닫기)", use_container_width=True)
             
         # 실시간 재합성 로직
         try:
@@ -233,19 +241,15 @@ def render_hero_editor():
             bg.convert("RGB").save(out_bytes, format='PNG')
             encoded = base64.b64encode(out_bytes.getvalue()).decode('utf-8')
             
-            # 미리보기 공간에 이미지 그리기
+            # 미리보기 공간에 이미지 그리기 (왼쪽 컬럼)
             preview_container.image(bg, use_container_width=True)
             
-            # 저장 버튼
-            st.markdown("---")
-            col_save1, col_save2 = st.columns([1, 1])
-            with col_save1:
-                if st.button("✔️ 이대로 적용하기", type="primary", use_container_width=True):
-                    st.session_state.hero_ai_b64 = encoded
-                    st.rerun()
-            with col_save2:
-                if st.button("❌ 취소 (창 닫기)", use_container_width=True):
-                    st.rerun()
+            # 저장 버튼 동작 처리
+            if save_btn:
+                st.session_state.hero_ai_b64 = encoded
+                st.rerun()
+            if cancel_btn:
+                st.rerun()
                     
         except Exception as e:
             st.error(f"편집 오류: {e}")
