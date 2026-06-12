@@ -151,8 +151,8 @@ def on_hero_change():
     st.session_state.pop('hero_ai_mime', None)
 
 @st.dialog("🎨 세부 편집기 (팝업창)", width="large")
-def render_hero_editor():
-    if 'hero_fg_img' in st.session_state and 'hero_bg_img' in st.session_state:
+def render_editor(target_id="hero"):
+    if f'{target_id}_fg_img' in st.session_state and f'{target_id}_bg_img' in st.session_state:
         st.markdown("**[조작 방법]** 슬라이더나 텍스트를 변경하면 아래 결과 이미지가 실시간으로 업데이트됩니다.")
         
         # 레이아웃 2분할 (좌: 미리보기, 우: 컨트롤러)
@@ -185,9 +185,9 @@ def render_hero_editor():
                     bg_color = st.color_picker("단색 배경 색상 선택", "#000000", key='edit_bg_color')
                 else:
                     bg_color = "#000000"
-                    if 'hero_ai_bg_candidates' in st.session_state and len(st.session_state.hero_ai_bg_candidates) > 0:
+                    if f'{target_id}_ai_bg_candidates' in st.session_state and len(st.session_state[f'{target_id}_ai_bg_candidates']) > 0:
                         theme_names = ["1. 다크 스튜디오", "2. 밝은 대리석", "3. 골드 & 베이지", "4. 파스텔 기하학"]
-                        opts = theme_names[:len(st.session_state.hero_ai_bg_candidates)]
+                        opts = theme_names[:len(st.session_state[f'{target_id}_ai_bg_candidates'])]
                         selected_theme = st.selectbox("✨ 4가지 AI 배경 중 선택", opts, key='edit_ai_bg_idx')
                         ai_bg_index = opts.index(selected_theme)
                 
@@ -221,8 +221,8 @@ def render_hero_editor():
             from PIL import ImageFilter, ImageDraw, ImageFont
             import io, base64
             
-            fg = st.session_state.hero_fg_img.copy()
-            bg = st.session_state.hero_bg_img.copy()
+            fg = st.session_state[f'{target_id}_fg_img'].copy()
+            bg = st.session_state[f'{target_id}_bg_img'].copy()
             
             if erode_size > 0:
                 import cv2
@@ -237,14 +237,14 @@ def render_hero_editor():
             
             if bg_upload is not None:
                 bg = PIL.Image.open(io.BytesIO(bg_upload.getvalue())).convert("RGBA")
-                bg = bg.resize(st.session_state.hero_bg_img.size, PIL.Image.Resampling.LANCZOS)
+                bg = bg.resize(st.session_state[f'{target_id}_bg_img'].size, PIL.Image.Resampling.LANCZOS)
             elif use_solid_bg:
                 bg = PIL.Image.new("RGBA", bg.size, bg_color)
             else:
-                if 'hero_ai_bg_candidates' in st.session_state and len(st.session_state.hero_ai_bg_candidates) > ai_bg_index:
-                    bg = PIL.Image.open(io.BytesIO(st.session_state.hero_ai_bg_candidates[ai_bg_index])).convert("RGBA")
+                if f'{target_id}_ai_bg_candidates' in st.session_state and len(st.session_state[f'{target_id}_ai_bg_candidates']) > ai_bg_index:
+                    bg = PIL.Image.open(io.BytesIO(st.session_state[f'{target_id}_ai_bg_candidates'][ai_bg_index])).convert("RGBA")
                     # 배경을 기존 캔버스 사이즈에 맞춤 (안전장치)
-                    bg = bg.resize(st.session_state.hero_bg_img.size, PIL.Image.Resampling.LANCZOS)
+                    bg = bg.resize(st.session_state[f'{target_id}_bg_img'].size, PIL.Image.Resampling.LANCZOS)
             
             new_size = (int(fg.size[0] * scale), int(fg.size[1] * scale))
             if new_size[0] > 0 and new_size[1] > 0:
@@ -307,7 +307,19 @@ def render_hero_editor():
             
             # 저장 버튼 동작 처리
             if save_btn:
-                st.session_state.hero_ai_b64 = encoded
+                if target_id == "hero":
+                    st.session_state.hero_ai_b64 = encoded
+                else:
+                    idx = int(target_id.split('_')[1])
+                    if 'loaded_story_blocks' not in st.session_state:
+                        st.session_state.loaded_story_blocks = []
+                    while len(st.session_state.loaded_story_blocks) <= idx:
+                        st.session_state.loaded_story_blocks.append({})
+                    st.session_state.loaded_story_blocks[idx]['b64'] = encoded
+                    
+                    if 'story_ai_blocks' not in st.session_state:
+                        st.session_state.story_ai_blocks = [None] * 5
+                    st.session_state.story_ai_blocks[idx] = {'b64': encoded}
                 st.rerun()
             if cancel_btn:
                 st.rerun()
@@ -327,8 +339,8 @@ with col1:
             st.rerun()
             
         # [NEW] 에디터 호출 (팝업창)
-        if st.button("🎨 세부 편집기 열기 (새창)", type="secondary"):
-            render_hero_editor()
+        if st.button("🎨 세부 편집기 열기 (새창)", key="hero_editor_btn_2"):
+            render_editor("hero")
         
     elif hero_file:
         st.image(hero_file, width=450)
@@ -356,7 +368,7 @@ with col1:
                 st.session_state.hero_fg_img = fg
                 st.session_state.hero_bg_img = bg
                 st.session_state.hero_ai_b64 = None # 초기화
-            render_hero_editor()
+            render_editor("hero")
     elif st.session_state.get('loaded_hero_b64'):
         import base64
         st.image(base64.b64decode(st.session_state.loaded_hero_b64), width=450)
@@ -590,15 +602,51 @@ for i in range(5):
                 if st.button("❌ 원본 복구", key=f"rev_{i}"):
                     clear_story_ai(i)
                     st.rerun()
-            elif f:
-                st.image(f, width=450)
-            elif loaded_b64:
-                import base64
-                st.image(base64.b64decode(loaded_b64), width=450)
-                st.info("✅ 보관함/AI 이미지 대기 중")
+                if st.button("🎨 세부 편집기 열기 (새창)", key=f"story_ai_edit_{i}", type="secondary"):
+                    render_editor(f"story_{i}")
+            elif f or loaded_b64:
+                if f:
+                    st.image(f, width=450)
+                else:
+                    import base64
+                    st.image(base64.b64decode(loaded_b64), width=450)
+                    st.info("✅ 보관함/AI 이미지 대기 중")
+                    
+                col_c1, col_c2 = st.columns(2)
+                with col_c1:
+                    keep_bg = st.checkbox("원본 배경 유지 (누끼 안 땀)", value=True, key=f"story_keep_{i}")
+                with col_c2:
+                    use_matting = st.checkbox("테두리 부드럽게 (털/복잡한 선)", value=False, disabled=keep_bg, key=f"story_mat_{i}")
+                    
+                if st.button("⚡ 바로 편집하기 (새창)", type="secondary", key=f"story_quick_{i}"):
+                    with st.spinner("이미지 준비 중... ✂️"):
+                        import io, PIL.Image
+                        if f:
+                            target_img = PIL.Image.open(f)
+                        else:
+                            import base64
+                            target_img = PIL.Image.open(io.BytesIO(base64.b64decode(loaded_b64)))
+                            
+                        if keep_bg:
+                            fg = target_img.convert("RGBA")
+                        else:
+                            from rembg import remove
+                            img_byte_arr = io.BytesIO()
+                            target_img.save(img_byte_arr, format='PNG')
+                            fg_bytes = remove(img_byte_arr.getvalue(), session=get_rembg_session(), post_process_mask=True, alpha_matting=use_matting)
+                            fg = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
+                        
+                        bg = PIL.Image.new("RGBA", fg.size, (255, 255, 255, 0))
+                        
+                        st.session_state[f'story_{i}_fg_img'] = fg
+                        st.session_state[f'story_{i}_bg_img'] = bg
+                        
+                        if 'story_ai_blocks' in st.session_state and len(st.session_state.story_ai_blocks) > i and st.session_state.story_ai_blocks[i]:
+                            st.session_state.story_ai_blocks[i]['b64'] = None
+                    render_editor(f"story_{i}")
             
-            ai_b64 = ai_info['b64'] if ai_info else None
-            ai_mime = ai_info['mime'] if ai_info else None
+            ai_b64 = ai_info['b64'] if ai_info and ai_info.get('b64') else None
+            ai_mime = ai_info['mime'] if ai_info and ai_info.get('mime') else None
             story_files.append({"file": f, "b64": loaded_b64, "mime": loaded_mime, "ai_b64": ai_b64, "ai_mime": ai_mime})
             
         with c2:
@@ -674,64 +722,81 @@ for i in range(5):
                                     fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
                                     fg_img = remove_small_noise(fg_img)
                                     
-                                    # 2. 고급 배경 AI 생성 (피사체 없이 배경만)
-                                    bg_prompt = "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text."
+                                    # 2. 고급 배경 AI 생성 (4가지 테마)
+                                    bg_prompts = [
+                                        "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text.",
+                                        "A bright and airy minimalist studio background with soft natural morning light and gentle shadows, pure white marble surface, 8k resolution, completely empty, no text.",
+                                        "A luxurious warm gold and beige studio background, soft bokeh, high-end product photography style, completely empty, 8k resolution, no text.",
+                                        "A modern abstract geometric background in pastel tones, soft lighting, 3d render style, completely empty, perfect for product placement, no text."
+                                    ]
                                     model = genai.GenerativeModel('models/gemini-2.5-flash-image')
-                                    response = model.generate_content(bg_prompt)
                                     
-                                    generated_bytes = response.candidates[0].content.parts[0].inline_data.data
-                                    if not generated_bytes:
-                                        # 필터링 당하면 에러 대신 고급스러운 수제 그라데이션 배경 사용
-                                        from PIL import ImageDraw, ImageFilter
-                                        bg_img = PIL.Image.new("RGBA", fg_img.size, (15, 15, 18, 255))
-                                        draw = ImageDraw.Draw(bg_img)
-                                        for y in range(fg_img.size[1]):
-                                            ratio = y / fg_img.size[1]
-                                            r = int(58 - (58 - 13) * ratio)
-                                            g = int(62 - (62 - 14) * ratio)
-                                            b = int(71 - (71 - 17) * ratio)
-                                            draw.line([(0, y), (fg_img.size[0], y)], fill=(r, g, b, 255))
-                                    else:
-                                        bg_img = PIL.Image.open(io.BytesIO(generated_bytes)).convert("RGBA")
-                                    
-                                    # 3. 배경을 원본 사진과 완전히 동일한 크기/비율로 맞추기
-                                    fg_ratio = fg_img.size[0] / fg_img.size[1]
-                                    bg_ratio = bg_img.size[0] / bg_img.size[1]
-                                    
-                                    if fg_ratio > bg_ratio:
-                                        new_bg_h = int(bg_img.size[0] / fg_ratio)
-                                        top = (bg_img.size[1] - new_bg_h) // 2
-                                        bg_img = bg_img.crop((0, top, bg_img.size[0], top + new_bg_h))
-                                    else:
-                                        new_bg_w = int(bg_img.size[1] * fg_ratio)
-                                        left = (bg_img.size[0] - new_bg_w) // 2
-                                        bg_img = bg_img.crop((left, 0, left + new_bg_w, bg_img.size[1]))
+                                    generated_bgs = []
+                                    import concurrent.futures
+                                    def generate_single_bg(prompt):
+                                        try:
+                                            res = model.generate_content(prompt)
+                                            return res.candidates[0].content.parts[0].inline_data.data
+                                        except Exception:
+                                            return None
+                                            
+                                    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                                        results = executor.map(generate_single_bg, bg_prompts)
                                         
+                                    for b_data in results:
+                                        if b_data:
+                                            generated_bgs.append(b_data)
+                                            
+                                    # 항상 4개의 배경을 보장 (API 필터링/에러 대비 파이썬 직접 렌더링)
+                                    from PIL import ImageDraw
+                                    def create_fallback_bg(theme_idx, size):
+                                        bg = PIL.Image.new("RGBA", size, (255, 255, 255, 255))
+                                        draw = ImageDraw.Draw(bg)
+                                        if theme_idx == 0:
+                                            for y in range(size[1]):
+                                                ratio = y / size[1]
+                                                r, g, b = int(58 - 45 * ratio), int(62 - 48 * ratio), int(71 - 54 * ratio)
+                                                draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+                                        elif theme_idx == 1:
+                                            for y in range(size[1]):
+                                                ratio = y / size[1]
+                                                r, g, b = int(255 - 20 * ratio), int(255 - 20 * ratio), int(255 - 15 * ratio)
+                                                draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+                                        elif theme_idx == 2:
+                                            for y in range(size[1]):
+                                                ratio = y / size[1]
+                                                r, g, b = int(212 - 50 * ratio), int(175 - 40 * ratio), int(55 - 10 * ratio)
+                                                draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+                                        else:
+                                            for y in range(size[1]):
+                                                ratio = y / size[1]
+                                                r, g, b = int(255 - 15 * ratio), int(230 - 15 * ratio), int(230 - 20 * ratio)
+                                                draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+                                        return bg
+                                        
+                                    while len(generated_bgs) < 4:
+                                        idx = len(generated_bgs)
+                                        fallback = create_fallback_bg(idx, fg_img.size)
+                                        out_bytes = io.BytesIO()
+                                        fallback.save(out_bytes, format='PNG')
+                                        generated_bgs.append(out_bytes.getvalue())
+                                        
+                                    # 첫번째 배경을 기본 배경으로 설정
+                                    bg_img = PIL.Image.open(io.BytesIO(generated_bgs[0])).convert("RGBA")
                                     bg_img = bg_img.resize(fg_img.size, PIL.Image.Resampling.LANCZOS)
                                     
-                                    # 그림자 생성 (원본 크기에 맞춤)
-                                    from PIL import ImageFilter
-                                    shadow = PIL.Image.new("RGBA", fg_img.size, (0, 0, 0, 0))
-                                    shadow.paste((0, 0, 0, 180), (0, 0), mask=fg_img)
-                                    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=int(max(fg_img.size)*0.01)))
+                                    st.session_state[f'story_{i}_ai_bg_candidates'] = generated_bgs
+                                    st.session_state[f'story_{i}_fg_img'] = fg_img
+                                    st.session_state[f'story_{i}_bg_img'] = bg_img
                                     
-                                    offset_y = int(max(fg_img.size)*0.02)
-                                    bg_img.paste(shadow, (0, offset_y), mask=shadow)
-                                    
-                                    # 원본 피사체를 원래 위치 그대로(0,0) 합성
-                                    bg_img.paste(fg_img, (0, 0), mask=fg_img)
-                                    
-                                    out_bytes = io.BytesIO()
-                                    bg_img.convert("RGB").save(out_bytes, format='PNG')
-                                    generated_bytes = out_bytes.getvalue()
-                                    mime_type = "image/png"
+                                    if 'story_ai_blocks' in st.session_state and len(st.session_state.story_ai_blocks) > i and st.session_state.story_ai_blocks[i]:
+                                        st.session_state.story_ai_blocks[i]['b64'] = None
+                                        
                                 except Exception as e:
                                     st.error(f"합성 오류: {e}")
                                     st.stop()
                                 
-                                import base64
-                                st.session_state.story_ai_blocks[i] = {'b64': base64.b64encode(generated_bytes).decode('utf-8'), 'mime': mime_type}
-                                st.rerun()
+                                render_editor(f"story_{i}")
                             except Exception as e:
                                 st.error(f"오류: {e}")
 
