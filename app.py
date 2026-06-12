@@ -394,9 +394,9 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             img = PIL.Image.open(io.BytesIO(base64.b64decode(st.session_state.loaded_hero_b64)))
                         
                         if web_info.strip():
-                            prompt = f"상품 메인 대표 사진과 검색정보야.\n[정보]\n{web_info}\n사진과 정보를 조합해 매력적인 마케팅 문구 3~4문장을 써줘."
+                            prompt = f"상품 메인 대표 사진과 검색정보야.\n[정보]\n{web_info}\n사진과 정보를 바탕으로 상품의 특징(재질, 색상, 디자인 등)을 아주 구체적이고 디테일하게 설명하는 매력적인 마케팅 문구를 4~5문장으로 풍부하게 작성해 줘. 전문 카피라이터처럼 고객의 감성과 구매 욕구를 자극해 줘."
                         else:
-                            prompt = "이 사진의 특징을 파악해 매력적인 마케팅 문구 3~4문장 써줘."
+                            prompt = "이 사진의 특징(재질, 색상, 형태, 분위기 등)을 아주 구체적이고 디테일하게 분석해서, 고객의 구매 욕구를 자극할 수 있는 감성적이고 상세한 마케팅 문구를 4~5문장으로 길고 풍부하게 작성해 줘. 전문적인 카피라이터처럼 상품의 가치를 돋보이게 설명해 줘."
                         
                         try:
                             model = genai.GenerativeModel('gemini-2.5-flash')
@@ -621,7 +621,7 @@ for i in range(5):
                                     import base64
                                     img = PIL.Image.open(io.BytesIO(base64.b64decode(loaded_b64)))
                                 
-                                prompt = "이 제품 상세페이지에 들어갈 고급스러운 마케팅 문구 2~3문장을 작성해줘. 짧고 임팩트 있게 작성하고 줄바꿈을 적절히 써줘."
+                                prompt = "이 상품 사진에 어울리는 감성적이고 구체적인 스토리텔링 메시지를 3~4문장으로 작성해 줘. 단순히 상품을 소개하는 것을 넘어, 이 상품을 사용했을 때 고객이 느낄 수 있는 기분이나 일상의 긍정적인 변화를 시각적이고 디테일하게 묘사해 줘. 짧고 단순한 문구 대신, 고객의 마음을 움직일 수 있는 풍부한 표현을 사용하고 읽기 편하게 적절히 줄바꿈을 넣어 줘."
                                 try:
                                     model = genai.GenerativeModel('gemini-2.5-flash')
                                     response = model.generate_content([prompt, img])
