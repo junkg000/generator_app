@@ -383,6 +383,7 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                                     results = ddgs.text(f"{search_keyword}", max_results=5)
                                     for res in results:
                                         web_info += f"- {res['title']}: {res['body']}\n"
+                                st.session_state.last_web_info = web_info
                             except Exception:
                                 pass
                                 
@@ -394,7 +395,7 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             img = PIL.Image.open(io.BytesIO(base64.b64decode(st.session_state.loaded_hero_b64)))
                         
                         if web_info.strip():
-                            prompt = f"상품 메인 대표 사진과 검색정보야.\n[정보]\n{web_info}\n요즘 트렌디한 인스타그램 쇼핑몰이나 애플(Apple) 광고처럼 아주 짧고 간결하면서도 임팩트 있는 카피라이팅을 2~3줄로 작성해 줘. 특징을 구체적으로 짚어주되, 구구절절 긴 문장은 절대 피하고, 감각적으로 줄바꿈을 해 줘."
+                            prompt = f"상품 메인 사진과 검색정보야.\n[정보]\n{web_info}\n위 [정보]에 나오는 상품의 진짜 의미와 효과(예: 액막이, 재물운, 마음 안정 등)를 반드시 내용에 포함시켜 줘! 그리고 요즘 트렌디한 인스타그램 쇼핑몰이나 애플(Apple) 광고처럼 아주 짧고 간결하면서도 시선을 사로잡는 임팩트 있는 카피라이팅을 2~3줄로 작성해 줘. 구구절절 긴 문장은 절대 피하고, 감각적인 줄바꿈을 해 줘."
                         else:
                             prompt = "이 사진의 특징과 디테일을 파악해서, 요즘 트렌디한 쇼핑몰이나 애플(Apple) 광고처럼 아주 짧고 간결하면서도 임팩트 있는 카피라이팅을 2~3줄로 작성해 줘. 구구절절 긴 문장은 절대 피하고, 시선을 확 끄는 핵심 단어 위주로 감각적인 줄바꿈을 해 줘."
                         
@@ -621,7 +622,11 @@ for i in range(5):
                                     import base64
                                     img = PIL.Image.open(io.BytesIO(base64.b64decode(loaded_b64)))
                                 
-                                prompt = "이 상품 사진의 핵심 디테일과 감성을 살려서, 트렌디한 쇼핑몰 상세페이지에 들어갈 아주 짧고 임팩트 있는 카피라이팅 2~3줄을 작성해 줘. 길고 지루한 설명은 빼고, 고객의 시선을 확 사로잡을 수 있도록 간결하게 쓰고 감각적으로 줄바꿈을 넣어 줘."
+                                web_context = st.session_state.get('last_web_info', '')
+                                if web_context:
+                                    prompt = f"상품 사진과 관련 정보야.\n[정보]\n{web_context}\n위 [정보]에 나오는 상품의 상징과 효능(예: 액막이, 재물운 등)을 반드시 활용해 줘! 사진의 디테일과 결합하여, 트렌디한 쇼핑몰 상세페이지에 들어갈 아주 짧고 임팩트 있는 카피라이팅 2~3줄을 작성해 줘. 길고 지루한 설명은 빼고 간결하게 쓰고 감각적으로 줄바꿈을 넣어 줘."
+                                else:
+                                    prompt = "이 상품 사진의 핵심 디테일과 감성을 살려서, 트렌디한 쇼핑몰 상세페이지에 들어갈 아주 짧고 임팩트 있는 카피라이팅 2~3줄을 작성해 줘. 길고 지루한 설명은 빼고, 고객의 시선을 확 사로잡을 수 있도록 간결하게 쓰고 감각적으로 줄바꿈을 넣어 줘."
                                 try:
                                     model = genai.GenerativeModel('gemini-2.5-flash')
                                     response = model.generate_content([prompt, img])
