@@ -307,15 +307,23 @@ with col1:
         
     elif hero_file:
         st.image(hero_file, width=450)
-        use_matting = st.checkbox("테두리 부드럽게 다듬기 (털, 복잡한 윤곽선 전용)", value=False)
-        if st.button("⚡ AI 없이 바로 편집하기 (새창)", type="secondary"):
-            with st.spinner("이미지 준비 중 (누끼 제거)... ✂️"):
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            keep_bg = st.checkbox("원본 배경 유지 (누끼 안 땀)", value=True)
+        with col_c2:
+            use_matting = st.checkbox("테두리 부드럽게 (털/복잡한 선)", value=False, disabled=keep_bg)
+            
+        if st.button("⚡ 바로 편집하기 (새창)", type="secondary"):
+            with st.spinner("이미지 준비 중... ✂️"):
                 import io, PIL.Image
-                from rembg import remove
                 
-                img_bytes = hero_file.getvalue()
-                fg_bytes = remove(img_bytes, session=get_rembg_session(), post_process_mask=True, alpha_matting=use_matting)
-                fg = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
+                if keep_bg:
+                    fg = PIL.Image.open(hero_file).convert("RGBA")
+                else:
+                    from rembg import remove
+                    img_bytes = hero_file.getvalue()
+                    fg_bytes = remove(img_bytes, session=get_rembg_session(), post_process_mask=True, alpha_matting=use_matting)
+                    fg = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
                 
                 # 기본 배경은 투명으로 설정 (나중에 단색/이미지로 변경 가능)
                 bg = PIL.Image.new("RGBA", fg.size, (255, 255, 255, 0))
