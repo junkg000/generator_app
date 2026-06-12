@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.zip
+.env
+api_key.txt
+saved_products/
