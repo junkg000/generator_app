@@ -171,14 +171,25 @@ def render_hero_editor():
                 offset_y = st.slider("세로 위치 (Y)", -1000, 1000, 0, 10, key='edit_y')
                 
             with tab2:
-                bg_upload = st.file_uploader("배경 사진 직접 업로드", type=['png','jpg','jpeg'], key='edit_bg_file')
-                use_solid_bg = st.checkbox("단색 배경 사용하기", value=False, key='edit_use_solid')
-                bg_color = st.color_picker("단색 배경 색상", "#000000", key='edit_bg_color')
+                bg_type = st.radio("배경 설정 방식", ["기존 AI 배경 유지", "단색 배경 적용", "직접 이미지 업로드"], horizontal=True, key="edit_bg_type")
+                
+                bg_upload = None
+                use_solid_bg = False
+                
+                if bg_type == "직접 이미지 업로드":
+                    bg_upload = st.file_uploader("배경 사진 직접 업로드", type=['png','jpg','jpeg'], key='edit_bg_file')
+                elif bg_type == "단색 배경 적용":
+                    use_solid_bg = True
+                    bg_color = st.color_picker("단색 배경 색상 선택", "#000000", key='edit_bg_color')
+                else:
+                    # 기존 AI 배경 유지 시 더미 변수
+                    bg_color = "#000000"
                 
             with tab3:
                 overlay_text = st.text_input("삽입할 문구", "", key='edit_text')
                 text_size = st.slider("글씨 크기", 10, 300, 80, 5, key='edit_text_size')
-                text_y = st.slider("글씨 세로 위치", 0, 1500, 100, 10, key='edit_text_y')
+                text_x = st.slider("글씨 가로 위치 (좌우 이동)", -1000, 1000, 0, 10, key='edit_text_x')
+                text_y = st.slider("글씨 세로 위치 (상하 이동)", 0, 1500, 100, 10, key='edit_text_y')
                 text_color = st.color_picker("글씨 색상", "#FFFFFF", key='edit_color')
                 
             st.markdown("---")
@@ -234,7 +245,7 @@ def render_hero_editor():
                 except:
                     tw = text_size * len(overlay_text) * 0.5
                     
-                tx = (bg.size[0] - tw) // 2
+                tx = (bg.size[0] - tw) // 2 + text_x
                 draw.text((tx, text_y), overlay_text, fill=text_color, font=font)
             
             out_bytes = io.BytesIO()
