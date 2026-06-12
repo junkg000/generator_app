@@ -13,7 +13,7 @@ st.set_page_config(page_title="프리미엄 상세페이지 생성기", layout="
 @st.cache_resource
 def get_rembg_session():
     from rembg import new_session
-    return new_session('u2net')
+    return new_session('birefnet-general')
 
 def remove_small_noise(img):
     try:
