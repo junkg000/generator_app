@@ -190,7 +190,6 @@ def render_editor(target_id="hero"):
                         st.session_state[f'{target_id}_fg_img'] = out
                         # 렌더링 캐시 초기화
                         st.session_state.pop(f'{target_id}_last_fg_params', None)
-                        st.rerun()
             with tab2:
                 bg_type = st.radio("배경 설정 방식", ["기존 AI 배경 유지", "단색 배경 적용", "직접 이미지 업로드"], horizontal=True, key="edit_bg_type")
                 
