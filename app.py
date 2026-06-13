@@ -708,7 +708,16 @@ for i in range(5):
             f = st.file_uploader(f"블록 {i+1} 이미지", type=['jpg','png','jpeg'], key=f"img_widget_new_{i}", on_change=clear_story_ai, args=(i,))
             
             ai_info = st.session_state.story_ai_blocks[i]
-            if ai_info and ai_info.get('b64'):
+            
+            if f'story_{i}_result' in st.session_state:
+                st.image(st.session_state[f'story_{i}_result'], width=450)
+                st.success("✨ 세부 편집이 적용되었습니다.")
+                if st.button("❌ 편집 취소 (원본/AI 복구)", key=f"rev_edit_{i}"):
+                    del st.session_state[f'story_{i}_result']
+                    st.rerun()
+                if st.button("🎨 다시 편집하기 (팝업창)", key=f"story_ai_reedit_{i}"):
+                    render_editor(f"story_{i}")
+            elif ai_info and ai_info.get('b64'):
                 import base64
                 st.image(base64.b64decode(ai_info['b64']), width=450)
                 st.success("✨ AI 사진 적용됨")
@@ -760,7 +769,15 @@ for i in range(5):
             
             ai_b64 = ai_info['b64'] if ai_info and ai_info.get('b64') else None
             ai_mime = ai_info['mime'] if ai_info and ai_info.get('mime') else None
-            story_files.append({"file": f, "b64": loaded_b64, "mime": loaded_mime, "ai_b64": ai_b64, "ai_mime": ai_mime})
+            
+            edit_b64 = None
+            if f'story_{i}_result' in st.session_state:
+                import io, base64
+                out = io.BytesIO()
+                st.session_state[f'story_{i}_result'].save(out, format='PNG')
+                edit_b64 = base64.b64encode(out.getvalue()).decode('utf-8')
+                
+            story_files.append({"file": f, "b64": loaded_b64, "mime": loaded_mime, "ai_b64": ai_b64, "ai_mime": ai_mime, "edit_b64": edit_b64})
             
         with c2:
             t = st.text_area(f"블록 {i+1} 텍스트", value=loaded_txt, height=150, key=f"txt_{i}_{st.session_state.get('load_timestamp', 'new')}", placeholder="예: 최고급 양모를 사용하여 탄력이 매우 뛰어나며...")
@@ -930,7 +947,13 @@ if st.button("✨ 럭셔리 상세페이지 생성하기", type="primary"):
     if not has_hero:
         st.warning("대표 이미지를 반드시 업로드해주세요!")
     else:
-        if st.session_state.get('hero_ai_b64'):
+        if st.session_state.get('hero_result'):
+            import io, base64
+            out = io.BytesIO()
+            st.session_state.hero_result.save(out, format='PNG')
+            encoded_hero = base64.b64encode(out.getvalue()).decode('utf-8')
+            mime_hero = "image/png"
+        elif st.session_state.get('hero_ai_b64'):
             encoded_hero = st.session_state.hero_ai_b64
             mime_hero = st.session_state.hero_ai_mime
         elif hero_file:
@@ -947,7 +970,10 @@ if st.button("✨ 럭셔리 상세페이지 생성하기", type="primary"):
         for idx_block, (file_info, text_val) in enumerate(zip(story_files, story_texts)):
             b64_val = ""
             mime_val = ""
-            if file_info.get("ai_b64"):
+            if file_info.get("edit_b64"):
+                b64_val = file_info["edit_b64"]
+                mime_val = "image/png"
+            elif file_info.get("ai_b64"):
                 b64_val = file_info["ai_b64"]
                 mime_val = file_info["ai_mime"]
             elif file_info["file"]:
