@@ -313,6 +313,8 @@ def render_editor(target_id="hero"):
             
             if use_template:
                 import templates
+                import importlib
+                importlib.reload(templates)
                 points = [
                     (tmpl_p1_icon, tmpl_p1_title, tmpl_p1_desc),
                     (tmpl_p2_icon, tmpl_p2_title, tmpl_p2_desc),
