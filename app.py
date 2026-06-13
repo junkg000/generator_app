@@ -221,6 +221,14 @@ def render_editor(target_id="hero"):
             with tab4:
                 st.markdown("**포스터 자동 완성 템플릿**")
                 use_template = st.toggle("템플릿 적용하기", value=False, key="tmpl_enable")
+                
+                tmpl_styles = [
+                    "1. 클래식 하단 배너", "2. 모던 중앙 집중형", "3. 좌측 세로 리본", "4. 우측 하단 미니멀 박스",
+                    "5. 투컬럼 스플릿", "6. 플로팅 포인트 카드", "7. 상하 분리형 (헤더&푸터)",
+                    "8. 풀 오버레이 그라데이션", "9. 대각선 스포트라이트", "10. 원형 배지 강조형"
+                ]
+                selected_tmpl = st.selectbox("적용할 레이아웃 스타일", tmpl_styles, key="tmpl_style")
+                
                 tmpl_color = st.color_picker("배너/포인트 색상", "#4A533E", key="tmpl_color")
                 tmpl_title = st.text_area("메인 타이틀", "프리미엄\n소나무붓\n4종 세트", key="tmpl_title")
                 tmpl_sub_top = st.text_input("상단 서브 타이틀", "한 붓의 차이가 작품의 품격을 만듭니다.", key="tmpl_sub_top")
@@ -296,77 +304,17 @@ def render_editor(target_id="hero"):
             
             bg = PIL.Image.alpha_composite(bg, temp_layer)
             
-            draw = ImageDraw.Draw(bg)
-            import os
-            
             if use_template:
-                font_bold = "fonts/BlackHanSans-Regular.ttf" if os.path.exists("fonts/BlackHanSans-Regular.ttf") else "malgun.ttf"
-                font_regular = "fonts/NanumGothic-Regular.ttf" if os.path.exists("fonts/NanumGothic-Regular.ttf") else "malgun.ttf"
-                
-                # 1. 하단 배너 그리기 (이미지 하단 16%)
-                banner_h = int(bg.size[1] * 0.16)
-                banner_y = bg.size[1] - banner_h
-                draw.rectangle([0, banner_y, bg.size[0], bg.size[1]], fill=tmpl_color)
-                
-                # 배너 내용 (3등분)
-                try:
-                    f_icon = ImageFont.truetype("seguiemj.ttf", int(banner_h * 0.4))
-                except:
-                    f_icon = ImageFont.truetype(font_regular, int(banner_h * 0.4))
-                    
-                f_p_title = ImageFont.truetype(font_bold, int(banner_h * 0.18))
-                f_p_desc = ImageFont.truetype(font_regular, int(banner_h * 0.12))
-                
-                col_w = bg.size[0] // 3
+                import templates
                 points = [
                     (tmpl_p1_icon, tmpl_p1_title, tmpl_p1_desc),
                     (tmpl_p2_icon, tmpl_p2_title, tmpl_p2_desc),
                     (tmpl_p3_icon, tmpl_p3_title, tmpl_p3_desc)
                 ]
+                style_idx = tmpl_styles.index(selected_tmpl)
+                bg = templates.render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_sub_bottom, points)
+                draw = ImageDraw.Draw(bg)
                 
-                for idx, (icon, title, desc) in enumerate(points):
-                    cx = idx * col_w + (col_w // 2)
-                    icon_x = cx - int(col_w * 0.25)
-                    text_x = cx - int(col_w * 0.05)
-                    
-                    try:
-                        draw.text((icon_x, banner_y + banner_h*0.5), icon, font=f_icon, fill="white", anchor="mm")
-                    except:
-                        draw.text((icon_x, banner_y + banner_h*0.3), icon, font=f_icon, fill="white")
-                    
-                    try:
-                        draw.text((text_x, banner_y + banner_h*0.35), title, font=f_p_title, fill="white", anchor="lm")
-                        draw.text((text_x, banner_y + banner_h*0.65), desc, font=f_p_desc, fill="#DDDDDD", anchor="lm")
-                    except:
-                        draw.text((text_x, banner_y + banner_h*0.25), title, font=f_p_title, fill="white")
-                        draw.text((text_x, banner_y + banner_h*0.55), desc, font=f_p_desc, fill="#DDDDDD")
-                    
-                # 2. 좌측 상단 타이틀 렌더링
-                title_x = int(bg.size[0] * 0.08)
-                title_y = int(bg.size[1] * 0.15)
-                
-                f_sub = ImageFont.truetype(font_bold, int(bg.size[0] * 0.035))
-                f_main = ImageFont.truetype(font_bold, int(bg.size[0] * 0.09))
-                
-                draw.text((title_x, title_y), tmpl_sub_top, font=f_sub, fill="#222222")
-                
-                lines = tmpl_title.split("\n")
-                curr_y = title_y + int(bg.size[1] * 0.05)
-                for idx, line in enumerate(lines):
-                    try:
-                        bbox = draw.textbbox((title_x, curr_y), line, font=f_main)
-                    except:
-                        bbox = (title_x, curr_y, title_x + int(bg.size[0]*0.4), curr_y + int(bg.size[1]*0.08))
-                        
-                    if idx % 2 == 1:
-                        draw.rectangle([bbox[0]-10, bbox[1]-5, bbox[2]+10, bbox[3]+15], fill=tmpl_color)
-                        draw.text((title_x, curr_y), line, font=f_main, fill="white")
-                    else:
-                        draw.text((title_x, curr_y), line, font=f_main, fill="#222222")
-                    curr_y += int(bg.size[1] * 0.1)
-                    
-                draw.text((title_x, curr_y + int(bg.size[1] * 0.02)), tmpl_sub_bottom, font=f_sub, fill="#333333")
-
             elif overlay_text.strip():
                 
                 font_map = {
