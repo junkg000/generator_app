@@ -236,9 +236,11 @@ def render_editor(target_id="hero"):
                 
                 col_off1, col_off2 = st.columns(2)
                 with col_off1:
-                    tmpl_offset_x = st.slider("템플릿 메인 도형/글씨 가로 이동", -1000, 1000, 0, 10, key="tmpl_off_x")
+                    tmpl_shape_off_x = st.slider("도형 가로 이동 (좌우)", -1000, 1000, 0, 10, key="tmpl_shape_off_x")
+                    tmpl_text_off_x = st.slider("글씨 가로 이동 (좌우)", -1000, 1000, 0, 10, key="tmpl_text_off_x")
                 with col_off2:
-                    tmpl_offset_y = st.slider("템플릿 메인 도형/글씨 세로 이동", -1000, 1000, 0, 10, key="tmpl_off_y")
+                    tmpl_shape_off_y = st.slider("도형 세로 이동 (상하)", -1000, 1000, 0, 10, key="tmpl_shape_off_y")
+                    tmpl_text_off_y = st.slider("글씨 세로 이동 (상하)", -1000, 1000, 0, 10, key="tmpl_text_off_y")
                     
                 st.markdown("---")
                 col_t1, col_t2, col_t3 = st.columns(3)
@@ -323,7 +325,7 @@ def render_editor(target_id="hero"):
                 style_idx = tmpl_styles.index(selected_tmpl)
                 bg = templates.render_template(
                     bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_sub_bottom, points,
-                    tmpl_offset_x, tmpl_offset_y
+                    tmpl_shape_off_x, tmpl_shape_off_y, tmpl_text_off_x, tmpl_text_off_y
                 )
                 draw = ImageDraw.Draw(bg)
                 
