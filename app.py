@@ -234,6 +234,13 @@ def render_editor(target_id="hero"):
                 tmpl_sub_top = st.text_input("상단 서브 타이틀", "한 붓의 차이가 작품의 품격을 만듭니다.", key="tmpl_sub_top")
                 tmpl_sub_bottom = st.text_input("하단 서브 타이틀", "전통의 깊이, 완성의 차이", key="tmpl_sub_bottom")
                 
+                st.markdown("---")
+                if st.button("🔄 위치 0으로 모두 초기화", key="reset_tmpl_pos"):
+                    st.session_state["tmpl_shape_off_x"] = 0
+                    st.session_state["tmpl_text_off_x"] = 0
+                    st.session_state["tmpl_shape_off_y"] = 0
+                    st.session_state["tmpl_text_off_y"] = 0
+
                 col_off1, col_off2 = st.columns(2)
                 with col_off1:
                     tmpl_shape_off_x = st.slider("도형 가로 이동 (좌우)", -1000, 1000, 0, 10, key="tmpl_shape_off_x")
