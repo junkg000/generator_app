@@ -233,6 +233,13 @@ def render_editor(target_id="hero"):
                 tmpl_title = st.text_area("메인 타이틀", "프리미엄\n소나무붓\n4종 세트", key="tmpl_title")
                 tmpl_sub_top = st.text_input("상단 서브 타이틀", "한 붓의 차이가 작품의 품격을 만듭니다.", key="tmpl_sub_top")
                 tmpl_sub_bottom = st.text_input("하단 서브 타이틀", "전통의 깊이, 완성의 차이", key="tmpl_sub_bottom")
+                
+                col_off1, col_off2 = st.columns(2)
+                with col_off1:
+                    tmpl_offset_x = st.slider("템플릿 메인 도형/글씨 가로 이동", -1000, 1000, 0, 10, key="tmpl_off_x")
+                with col_off2:
+                    tmpl_offset_y = st.slider("템플릿 메인 도형/글씨 세로 이동", -1000, 1000, 0, 10, key="tmpl_off_y")
+                    
                 st.markdown("---")
                 col_t1, col_t2, col_t3 = st.columns(3)
                 with col_t1:
@@ -312,7 +319,10 @@ def render_editor(target_id="hero"):
                     (tmpl_p3_icon, tmpl_p3_title, tmpl_p3_desc)
                 ]
                 style_idx = tmpl_styles.index(selected_tmpl)
-                bg = templates.render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_sub_bottom, points)
+                bg = templates.render_template(
+                    bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_sub_bottom, points,
+                    tmpl_offset_x, tmpl_offset_y
+                )
                 draw = ImageDraw.Draw(bg)
                 
             elif overlay_text.strip():
