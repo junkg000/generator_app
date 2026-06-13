@@ -277,38 +277,71 @@ def render_editor(target_id="hero"):
             from PIL import ImageFilter, ImageDraw, ImageFont
             import io, base64
             
-            fg = st.session_state[f'{target_id}_fg_img'].copy()
-            bg = st.session_state[f'{target_id}_bg_img'].copy()
+            fg = st.session_state[f'{target_id}_fg_img']
+            bg_base = st.session_state[f'{target_id}_bg_img']
             
-            if erode_size > 0:
-                import cv2
-                import numpy as np
-                arr = np.array(fg)
-                alpha = arr[:, :, 3]
-                kernel = np.ones((erode_size, erode_size), np.uint8)
-                alpha = cv2.erode(alpha, kernel, iterations=1)
-                alpha = cv2.GaussianBlur(alpha, (3, 3), 0)
-                arr[:, :, 3] = alpha
-                fg = PIL.Image.fromarray(arr)
+            # 1. FG 및 그림자 캐싱
+            current_fg_params = (erode_size, scale)
+            if st.session_state.get(f'{target_id}_last_fg_params') != current_fg_params:
+                temp_fg = fg.copy()
+                if erode_size > 0:
+                    import cv2
+                    import numpy as np
+                    arr = np.array(temp_fg)
+                    alpha = arr[:, :, 3]
+                    kernel = np.ones((erode_size, erode_size), np.uint8)
+                    alpha = cv2.erode(alpha, kernel, iterations=1)
+                    alpha = cv2.GaussianBlur(alpha, (3, 3), 0)
+                    arr[:, :, 3] = alpha
+                    temp_fg = PIL.Image.fromarray(arr)
+                
+                new_size = (int(temp_fg.size[0] * scale), int(temp_fg.size[1] * scale))
+                if new_size[0] > 0 and new_size[1] > 0:
+                    # 미리보기용은 LANCZOS 대신 BILINEAR 사용하여 속도 향상 가능하나, 캐싱되므로 LANCZOS 유지
+                    temp_fg = temp_fg.resize(new_size, PIL.Image.Resampling.LANCZOS)
+                
+                # 그림자 고속 생성 (CV2 GaussianBlur)
+                shadow = PIL.Image.new("RGBA", new_size, (0, 0, 0, 0))
+                shadow.paste((0, 0, 0, 180), (0, 0), mask=temp_fg)
+                
+                rad = int(max(new_size) * 0.01)
+                if rad > 0:
+                    import cv2
+                    import numpy as np
+                    arr = np.array(shadow)
+                    ksize = rad * 2 + 1
+                    arr = cv2.GaussianBlur(arr, (ksize, ksize), 0)
+                    shadow = PIL.Image.fromarray(arr)
+                
+                st.session_state[f'{target_id}_cached_fg'] = temp_fg
+                st.session_state[f'{target_id}_cached_shadow'] = shadow
+                st.session_state[f'{target_id}_last_fg_params'] = current_fg_params
             
-            if bg_upload is not None:
-                bg = PIL.Image.open(io.BytesIO(bg_upload.getvalue())).convert("RGBA")
-                bg = bg.resize(st.session_state[f'{target_id}_bg_img'].size, PIL.Image.Resampling.LANCZOS)
-            elif use_solid_bg:
-                bg = PIL.Image.new("RGBA", bg.size, bg_color)
-            else:
-                if f'{target_id}_ai_bg_candidates' in st.session_state and len(st.session_state[f'{target_id}_ai_bg_candidates']) > ai_bg_index:
-                    bg = PIL.Image.open(io.BytesIO(st.session_state[f'{target_id}_ai_bg_candidates'][ai_bg_index])).convert("RGBA")
-                    # 배경을 기존 캔버스 사이즈에 맞춤 (안전장치)
-                    bg = bg.resize(st.session_state[f'{target_id}_bg_img'].size, PIL.Image.Resampling.LANCZOS)
-            
-            new_size = (int(fg.size[0] * scale), int(fg.size[1] * scale))
-            if new_size[0] > 0 and new_size[1] > 0:
-                fg = fg.resize(new_size, PIL.Image.Resampling.LANCZOS)
-            
-            shadow = PIL.Image.new("RGBA", new_size, (0, 0, 0, 0))
-            shadow.paste((0, 0, 0, 180), (0, 0), mask=fg)
-            shadow = shadow.filter(ImageFilter.GaussianBlur(radius=int(max(new_size)*0.01)))
+            fg = st.session_state[f'{target_id}_cached_fg']
+            shadow = st.session_state[f'{target_id}_cached_shadow']
+            new_size = fg.size
+
+            # 2. BG 캐싱
+            bg_up_val = bg_upload.getvalue() if bg_upload is not None else None
+            current_bg_params = (bg_up_val, use_solid_bg, bg_color, ai_bg_index)
+            if st.session_state.get(f'{target_id}_last_bg_params') != current_bg_params:
+                temp_bg = bg_base.copy()
+                if bg_upload is not None:
+                    temp_bg = PIL.Image.open(io.BytesIO(bg_up_val)).convert("RGBA")
+                    if temp_bg.size != bg_base.size:
+                        temp_bg = temp_bg.resize(bg_base.size, PIL.Image.Resampling.LANCZOS)
+                elif use_solid_bg:
+                    temp_bg = PIL.Image.new("RGBA", bg_base.size, bg_color)
+                else:
+                    if f'{target_id}_ai_bg_candidates' in st.session_state and len(st.session_state[f'{target_id}_ai_bg_candidates']) > ai_bg_index:
+                        temp_bg = PIL.Image.open(io.BytesIO(st.session_state[f'{target_id}_ai_bg_candidates'][ai_bg_index])).convert("RGBA")
+                        if temp_bg.size != bg_base.size:
+                            temp_bg = temp_bg.resize(bg_base.size, PIL.Image.Resampling.LANCZOS)
+                
+                st.session_state[f'{target_id}_cached_bg'] = temp_bg
+                st.session_state[f'{target_id}_last_bg_params'] = current_bg_params
+
+            bg = st.session_state[f'{target_id}_cached_bg'].copy()
             
             cx = (bg.size[0] - new_size[0]) // 2 + offset_x
             cy = (bg.size[1] - new_size[1]) // 2 + offset_y
