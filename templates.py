@@ -1,29 +1,31 @@
 import os
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
 
-def get_fonts(font_bold_path="fonts/BlackHanSans-Regular.ttf", font_regular_path="fonts/NanumGothic-Regular.ttf", default_fallback="malgun.ttf"):
-    font_b = font_bold_path if os.path.exists(font_bold_path) else default_fallback
-    font_r = font_regular_path if os.path.exists(font_regular_path) else default_fallback
+def get_fonts():
+    font_b = "fonts/BlackHanSans-Regular.ttf" if os.path.exists("fonts/BlackHanSans-Regular.ttf") else "malgun.ttf"
+    font_r = "fonts/NanumGothic-Regular.ttf" if os.path.exists("fonts/NanumGothic-Regular.ttf") else "malgun.ttf"
     return font_b, font_r
 
-def get_emoji_font(font_r):
-    try:
-        return "seguiemj.ttf"
-    except:
-        return font_r
+def get_emoji_font(fallback):
+    return "seguiemj.ttf" if os.path.exists("C:/Windows/Fonts/seguiemj.ttf") else fallback
 
 def draw_text_with_fallback(draw, xy, text, font, fill, anchor=None):
     try:
-        draw.text(xy, text, font=font, fill=fill, anchor=anchor)
+        if anchor:
+            draw.text(xy, text, font=font, fill=fill, anchor=anchor)
+        else:
+            draw.text(xy, text, font=font, fill=fill)
     except:
         draw.text(xy, text, font=font, fill=fill)
 
 def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_sub_bottom, points, off_x=0, off_y=0):
-    draw = ImageDraw.Draw(bg)
+    W, H = bg.size
+    
+    tmpl_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(tmpl_layer)
+    
     font_b, font_r = get_fonts()
     font_e = get_emoji_font(font_r)
-    
-    W, H = bg.size
     
     if style_idx == 0:
         # 1. 클래식 하단 배너 (기존)
@@ -43,7 +45,7 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
             draw_text_with_fallback(draw, (text_x, banner_y + banner_h*0.35), title, f_p_title, "white", "lm")
             draw_text_with_fallback(draw, (text_x, banner_y + banner_h*0.65), desc, f_p_desc, "#DDDDDD", "lm")
             
-        title_x, title_y = int(W * 0.08) + off_x, int(H * 0.15) + off_y
+        title_x, title_y = int(W * 0.08), int(H * 0.15)
         f_sub = ImageFont.truetype(font_b, int(W * 0.035))
         f_main = ImageFont.truetype(font_b, int(W * 0.09))
         
@@ -63,27 +65,24 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
 
     elif style_idx == 1:
         # 2. 모던 중앙 집중형 (인스타그램 스타일)
-        # 옅은 어두운 오버레이
         overlay = Image.new("RGBA", bg.size, (0,0,0,120))
         bg = Image.alpha_composite(bg, overlay)
-        draw = ImageDraw.Draw(bg)
         
         f_main = ImageFont.truetype(font_b, int(W * 0.12))
         f_sub = ImageFont.truetype(font_b, int(W * 0.04))
         
-        cy = int(H * 0.3) + off_y
-        draw_text_with_fallback(draw, (W//2 + off_x, cy), tmpl_sub_top, f_sub, tmpl_color, "mm")
+        cy = int(H * 0.3)
+        draw_text_with_fallback(draw, (W//2, cy), tmpl_sub_top, f_sub, tmpl_color, "mm")
         
         lines = tmpl_title.split("\n")
         cy += int(H * 0.08)
         for line in lines:
-            draw_text_with_fallback(draw, (W//2 + off_x, cy), line, f_main, "white", "mm")
+            draw_text_with_fallback(draw, (W//2, cy), line, f_main, "white", "mm")
             cy += int(H * 0.13)
             
         cy += int(H * 0.05)
-        draw_text_with_fallback(draw, (W//2 + off_x, cy), tmpl_sub_bottom, f_sub, "#DDDDDD", "mm")
+        draw_text_with_fallback(draw, (W//2, cy), tmpl_sub_bottom, f_sub, "#DDDDDD", "mm")
         
-        # 포인트 3개 가로로 하단 배치
         f_icon = ImageFont.truetype(font_e, int(H * 0.06))
         f_p_title = ImageFont.truetype(font_b, int(H * 0.03))
         col_w = W // 3
@@ -96,13 +95,13 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
     elif style_idx == 2:
         # 3. 좌측 세로 리본
         ribbon_w = int(W * 0.35)
-        draw.rectangle([0 + off_x, 0, ribbon_w + off_x, H], fill=tmpl_color)
+        draw.rectangle([0, 0, ribbon_w, H], fill=tmpl_color)
         
         f_sub = ImageFont.truetype(font_b, int(ribbon_w * 0.08))
         f_main = ImageFont.truetype(font_b, int(ribbon_w * 0.18))
         
-        cx = ribbon_w // 2 + off_x
-        cy = int(H * 0.1) + off_y
+        cx = ribbon_w // 2
+        cy = int(H * 0.1)
         draw_text_with_fallback(draw, (cx, cy), tmpl_sub_top, f_sub, "#EEEEEE", "mm")
         
         lines = tmpl_title.split("\n")
@@ -125,7 +124,7 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
     elif style_idx == 3:
         # 4. 우측 하단 미니멀 박스
         box_w, box_h = int(W * 0.45), int(H * 0.35)
-        box_x, box_y = W - box_w - int(W*0.05) + off_x, H - box_h - int(H*0.05) + off_y
+        box_x, box_y = W - box_w - int(W*0.05), H - box_h - int(H*0.05)
         
         draw.rectangle([box_x, box_y, box_x+box_w, box_y+box_h], fill=(255,255,255,230))
         draw.rectangle([box_x, box_y, box_x+15, box_y+box_h], fill=tmpl_color)
@@ -155,7 +154,7 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         f_p_title = ImageFont.truetype(font_b, int(split_x * 0.09))
         f_p_desc = ImageFont.truetype(font_r, int(split_x * 0.06))
         
-        cx, cy = int(split_x * 0.1) + off_x, int(H * 0.1) + off_y
+        cx, cy = int(split_x * 0.1), int(H * 0.1)
         draw_text_with_fallback(draw, (cx, cy), tmpl_sub_top, f_sub, "#EEEEEE", "lt")
         
         lines = tmpl_title.split("\n")
@@ -196,10 +195,10 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         f_main = ImageFont.truetype(font_b, int(W * 0.1))
         f_sub = ImageFont.truetype(font_b, int(W * 0.04))
         
-        cy = int(H * 0.1) + off_y
-        draw_text_with_fallback(draw, (W//2 + off_x, cy), tmpl_sub_top, f_sub, tmpl_color, "mm")
+        cy = int(H * 0.1)
+        draw_text_with_fallback(draw, (W//2, cy), tmpl_sub_top, f_sub, tmpl_color, "mm")
         inline_title = tmpl_title.replace("\n", " ")
-        draw_text_with_fallback(draw, (W//2 + off_x, cy + int(H*0.07)), inline_title, f_main, "#222222", "mm")
+        draw_text_with_fallback(draw, (W//2, cy + int(H*0.07)), inline_title, f_main, "#222222", "mm")
 
     elif style_idx == 6:
         # 7. 상하 분리형 (헤더&푸터)
@@ -213,8 +212,8 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         f_sub = ImageFont.truetype(font_r, int(header_h * 0.2))
         
         inline_title = tmpl_title.replace("\n", " ")
-        draw_text_with_fallback(draw, (W//2 + off_x, header_h*0.4 + off_y), inline_title, f_main, "white", "mm")
-        draw_text_with_fallback(draw, (W//2 + off_x, header_h*0.8 + off_y), tmpl_sub_top, f_sub, "#DDDDDD", "mm")
+        draw_text_with_fallback(draw, (W//2, header_h*0.4), inline_title, f_main, "white", "mm")
+        draw_text_with_fallback(draw, (W//2, header_h*0.8), tmpl_sub_top, f_sub, "#DDDDDD", "mm")
         
         f_icon = ImageFont.truetype(font_e, int(footer_h * 0.4))
         f_p_title = ImageFont.truetype(font_b, int(footer_h * 0.25))
@@ -237,26 +236,26 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         f_main = ImageFont.truetype(font_b, int(W * 0.1))
         f_sub = ImageFont.truetype(font_r, int(W * 0.04))
         
-        cy = grad_y + int(grad_h * 0.2) + off_y
-        draw_text_with_fallback(draw, (W//2 + off_x, cy), tmpl_sub_top, f_sub, tmpl_color, "mm")
+        cy = grad_y + int(grad_h * 0.2)
+        draw_text_with_fallback(draw, (W//2, cy), tmpl_sub_top, f_sub, tmpl_color, "mm")
         
         inline_title = tmpl_title.replace("\n", " ")
         cy += int(grad_h * 0.2)
-        draw_text_with_fallback(draw, (W//2 + off_x, cy), inline_title, f_main, "white", "mm")
+        draw_text_with_fallback(draw, (W//2, cy), inline_title, f_main, "white", "mm")
         
         cy += int(grad_h * 0.3)
         col_w = W // 3
         f_p_title = ImageFont.truetype(font_b, int(grad_h * 0.08))
         for idx, (icon, title, desc) in enumerate(points):
-            cx = idx * col_w + (col_w // 2) + off_x
+            cx = idx * col_w + (col_w // 2)
             draw_text_with_fallback(draw, (cx, cy), f"{icon} {title}", f_p_title, "white", "mm")
 
     elif style_idx == 8:
         # 9. 대각선 스포트라이트
         draw.polygon([(0, 0), (int(W*0.6), 0), (int(W*0.4), H), (0, H)], fill=tmpl_color)
         
-        title_x = int(W * 0.05) + off_x
-        title_y = int(H * 0.1) + off_y
+        title_x = int(W * 0.05)
+        title_y = int(H * 0.1)
         
         f_sub = ImageFont.truetype(font_b, int(W * 0.035))
         f_main = ImageFont.truetype(font_b, int(W * 0.09))
@@ -278,9 +277,8 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
 
     elif style_idx == 9:
         # 10. 원형 배지(Badge) 강조형
-        # 뱃지 크기를 20%로 줄이고, x/y 오프셋을 적용
         badge_r = int(W * 0.2)
-        bx, by = W - (badge_r*2) - int(W*0.05) + off_x, int(H*0.05) + off_y
+        bx, by = W - (badge_r*2) - int(W*0.05), int(H*0.05)
         draw.ellipse([bx, by, bx+badge_r*2, by+badge_r*2], fill=tmpl_color)
         draw.ellipse([bx+10, by+10, bx+badge_r*2-10, by+badge_r*2-10], outline="white", width=3)
         
@@ -303,4 +301,6 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
             ccx = idx * col_w + (col_w // 2)
             draw_text_with_fallback(draw, (ccx, banner_y + banner_h*0.5), f"{icon} {title}", f_p_title, tmpl_color, "mm")
 
+    # Paste the transparent tmpl_layer onto the background with offsets applied
+    bg.paste(tmpl_layer, (off_x, off_y), mask=tmpl_layer)
     return bg
