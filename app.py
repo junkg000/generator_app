@@ -352,6 +352,7 @@ def render_editor(target_id="hero"):
             temp_layer.paste(fg, (cx, cy), mask=fg)
             
             bg = PIL.Image.alpha_composite(bg, temp_layer)
+            draw = ImageDraw.Draw(bg)
             
             if use_template:
                 import templates
