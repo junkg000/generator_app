@@ -182,6 +182,12 @@ def render_editor(target_id="hero"):
                 erode_size = st.slider("테두리 색번짐 제거 (픽셀 깎기)", 0, 10, 0, 1, key='edit_erode')
                 
                 st.markdown("---")
+                st.markdown("**그림자 세밀 조절**")
+                shadow_intensity = st.slider("그림자 진하기 (투명도)", 0, 255, 180, 10, key='edit_shadow_int')
+                shadow_blur = st.slider("그림자 퍼짐 정도 (크기/블러)", 0, 10, 1, 1, key='edit_shadow_blur')
+                shadow_offset_y = st.slider("그림자 상하 위치 조정", -200, 200, 0, 5, key='edit_shadow_y')
+                
+                st.markdown("---")
                 if st.button("✨ 원본 이미지 배경 제거 (누끼따기)", key=f"edit_rembg_{target_id}", help="AI가 사진 속 피사체만 남기고 배경을 투명하게 지워줍니다."):
                     with st.spinner("AI가 배경을 제거하는 중... 잠시만 기다려주세요!"):
                         from rembg import remove
@@ -290,7 +296,7 @@ def render_editor(target_id="hero"):
             bg_base = st.session_state[f'{target_id}_bg_img']
             
             # 1. FG 및 그림자 캐싱
-            current_fg_params = (erode_size, scale)
+            current_fg_params = (erode_size, scale, shadow_intensity, shadow_blur)
             if st.session_state.get(f'{target_id}_last_fg_params') != current_fg_params:
                 temp_fg = fg.copy()
                 if erode_size > 0:
@@ -311,10 +317,11 @@ def render_editor(target_id="hero"):
                 
                 # 그림자 고속 생성 (CV2 GaussianBlur)
                 shadow = PIL.Image.new("RGBA", new_size, (0, 0, 0, 0))
-                shadow.paste((0, 0, 0, 180), (0, 0), mask=temp_fg)
+                if shadow_intensity > 0:
+                    shadow.paste((0, 0, 0, shadow_intensity), (0, 0), mask=temp_fg)
                 
-                rad = int(max(new_size) * 0.01)
-                if rad > 0:
+                rad = int(max(new_size) * 0.01 * shadow_blur)
+                if rad > 0 and shadow_intensity > 0:
                     import cv2
                     import numpy as np
                     arr = np.array(shadow)
@@ -354,10 +361,11 @@ def render_editor(target_id="hero"):
             
             cx = (bg.size[0] - new_size[0]) // 2 + offset_x
             cy = (bg.size[1] - new_size[1]) // 2 + offset_y
-            shadow_y = cy + int(max(new_size)*0.02)
+            shadow_y = cy + int(max(new_size)*0.02) + shadow_offset_y
             
             temp_layer = PIL.Image.new("RGBA", bg.size, (0, 0, 0, 0))
-            temp_layer.paste(shadow, (cx, shadow_y), mask=shadow)
+            if shadow_intensity > 0:
+                temp_layer.paste(shadow, (cx, shadow_y), mask=shadow)
             temp_layer.paste(fg, (cx, cy), mask=fg)
             
             bg = PIL.Image.alpha_composite(bg, temp_layer)
