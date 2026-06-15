@@ -176,16 +176,16 @@ def render_editor(target_id="hero"):
             tab1, tab2, tab3, tab4 = st.tabs(["🎯 피사체 조절", "🖼️ 배경 변경", "✍️ 글씨 오버레이", "✨ 포스터 템플릿"])
             
             with tab1:
-                scale = st.slider("피사체 크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, key='edit_scale')
-                offset_x = st.slider("가로 위치 (X)", -1000, 1000, 0, 10, key='edit_x')
-                offset_y = st.slider("세로 위치 (Y)", -1000, 1000, 0, 10, key='edit_y')
-                erode_size = st.slider("테두리 색번짐 제거 (픽셀 깎기)", 0, 10, 0, 1, key='edit_erode')
+                scale = st.slider("피사체 크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, key=f'edit_scale_{target_id}')
+                offset_x = st.slider("가로 위치 (X)", -1000, 1000, 0, 10, key=f'edit_x_{target_id}')
+                offset_y = st.slider("세로 위치 (Y)", -1000, 1000, 0, 10, key=f'edit_y_{target_id}')
+                erode_size = st.slider("테두리 색번짐 제거 (픽셀 깎기)", 0, 10, 0, 1, key=f'edit_erode_{target_id}')
                 
                 st.markdown("---")
                 st.markdown("**그림자 세밀 조절**")
-                shadow_intensity = st.slider("그림자 진하기 (투명도)", 0, 255, 180, 10, key='edit_shadow_int')
-                shadow_blur = st.slider("그림자 퍼짐 정도 (크기/블러)", 0, 10, 1, 1, key='edit_shadow_blur')
-                shadow_offset_y = st.slider("그림자 상하 위치 조정", -200, 200, 0, 5, key='edit_shadow_y')
+                shadow_intensity = st.slider("그림자 진하기 (투명도)", 0, 255, 180, 10, key=f'edit_shadow_int_{target_id}')
+                shadow_blur = st.slider("그림자 퍼짐 정도 (크기/블러)", 0, 10, 1, 1, key=f'edit_shadow_blur_{target_id}')
+                shadow_offset_y = st.slider("그림자 상하 위치 조정", -200, 200, 0, 5, key=f'edit_shadow_y_{target_id}')
                 
                 st.markdown("---")
                 if st.button("✨ 원본 이미지 배경 제거 (누끼따기)", key=f"edit_rembg_{target_id}", help="AI가 사진 속 피사체만 남기고 배경을 투명하게 지워줍니다."):
@@ -197,87 +197,87 @@ def render_editor(target_id="hero"):
                         # 렌더링 캐시 초기화
                         st.session_state.pop(f'{target_id}_last_fg_params', None)
             with tab2:
-                bg_type = st.radio("배경 설정 방식", ["기존 AI 배경 유지", "단색 배경 적용", "직접 이미지 업로드"], horizontal=True, key="edit_bg_type")
+                bg_type = st.radio("배경 설정 방식", ["기존 AI 배경 유지", "단색 배경 적용", "직접 이미지 업로드"], horizontal=True, key=f"edit_bg_type_{target_id}")
                 
                 bg_upload = None
                 use_solid_bg = False
                 ai_bg_index = 0
                 
                 if bg_type == "직접 이미지 업로드":
-                    bg_upload = st.file_uploader("배경 사진 직접 업로드", type=['png','jpg','jpeg'], key='edit_bg_file')
+                    bg_upload = st.file_uploader("배경 사진 직접 업로드", type=['png','jpg','jpeg'], key=f'edit_bg_file_{target_id}')
                 elif bg_type == "단색 배경 적용":
                     use_solid_bg = True
-                    bg_color = st.color_picker("단색 배경 색상 선택", "#000000", key='edit_bg_color')
+                    bg_color = st.color_picker("단색 배경 색상 선택", "#000000", key=f'edit_bg_color_{target_id}')
                 else:
                     bg_color = "#000000"
                     if f'{target_id}_ai_bg_candidates' in st.session_state and len(st.session_state[f'{target_id}_ai_bg_candidates']) > 0:
                         theme_names = ["1. 다크 스튜디오", "2. 밝은 대리석", "3. 골드 & 베이지", "4. 파스텔 기하학"]
                         opts = theme_names[:len(st.session_state[f'{target_id}_ai_bg_candidates'])]
-                        selected_theme = st.selectbox("✨ 4가지 AI 배경 중 선택", opts, key='edit_ai_bg_idx')
+                        selected_theme = st.selectbox("✨ 4가지 AI 배경 중 선택", opts, key=f'edit_ai_bg_idx_{target_id}')
                         ai_bg_index = opts.index(selected_theme)
                 
             with tab3:
-                overlay_text = st.text_input("삽입할 문구", "", key='edit_text')
+                overlay_text = st.text_input("삽입할 문구", "", key=f'edit_text_{target_id}')
                 
                 col_f1, col_f2 = st.columns(2)
                 with col_f1:
-                    font_family = st.selectbox("글꼴", ["나눔고딕", "나눔명조", "검은고딕 (매우 굵음)"], key='edit_font')
+                    font_family = st.selectbox("글꼴", ["나눔고딕", "나눔명조", "검은고딕 (매우 굵음)"], key=f'edit_font_{target_id}')
                 with col_f2:
                     if font_family == "검은고딕 (매우 굵음)":
-                        font_weight = st.selectbox("굵기", ["보통"], key='edit_weight')
+                        font_weight = st.selectbox("굵기", ["보통"], key=f'edit_weight_{target_id}')
                     else:
-                        font_weight = st.selectbox("굵기", ["보통", "굵게"], key='edit_weight')
+                        font_weight = st.selectbox("굵기", ["보통", "굵게"], key=f'edit_weight_{target_id}')
                         
-                text_size = st.slider("글씨 크기", 10, 300, 80, 5, key='edit_text_size')
-                text_x = st.slider("글씨 가로 위치 (좌우 이동)", -1000, 1000, 0, 10, key='edit_text_x')
-                text_y = st.slider("글씨 세로 위치 (상하 이동)", 0, 1500, 100, 10, key='edit_text_y')
-                text_color = st.color_picker("글씨 색상", "#FFFFFF", key='edit_color')
+                text_size = st.slider("글씨 크기", 10, 300, 80, 5, key=f'edit_text_size_{target_id}')
+                text_x = st.slider("글씨 가로 위치 (좌우 이동)", -1000, 1000, 0, 10, key=f'edit_text_x_{target_id}')
+                text_y = st.slider("글씨 세로 위치 (상하 이동)", 0, 1500, 100, 10, key=f'edit_text_y_{target_id}')
+                text_color = st.color_picker("글씨 색상", "#FFFFFF", key=f'edit_color_{target_id}')
                 
             with tab4:
                 st.markdown("**포스터 자동 완성 템플릿**")
-                use_template = st.toggle("템플릿 적용하기", value=False, key="tmpl_enable")
+                use_template = st.toggle("템플릿 적용하기", value=False, key=f"tmpl_enable_{target_id}")
                 
                 tmpl_styles = [
                     "1. 클래식 하단 배너", "2. 모던 중앙 집중형", "3. 좌측 세로 리본", "4. 우측 하단 미니멀 박스",
                     "5. 투컬럼 스플릿", "6. 플로팅 포인트 카드", "7. 상하 분리형 (헤더&푸터)",
                     "8. 풀 오버레이 그라데이션", "9. 대각선 스포트라이트", "10. 원형 배지 강조형"
                 ]
-                selected_tmpl = st.selectbox("적용할 레이아웃 스타일", tmpl_styles, key="tmpl_style")
+                selected_tmpl = st.selectbox("적용할 레이아웃 스타일", tmpl_styles, key=f"tmpl_style_{target_id}")
                 
-                tmpl_color = st.color_picker("배너/포인트 색상", "#4A533E", key="tmpl_color")
-                tmpl_title = st.text_area("메인 타이틀", "프리미엄\n소나무붓\n4종 세트", key="tmpl_title")
-                tmpl_sub_top = st.text_input("상단 서브 타이틀", "한 붓의 차이가 작품의 품격을 만듭니다.", key="tmpl_sub_top")
-                tmpl_sub_bottom = st.text_input("하단 서브 타이틀", "전통의 깊이, 완성의 차이", key="tmpl_sub_bottom")
+                tmpl_color = st.color_picker("배너/포인트 색상", "#4A533E", key=f"tmpl_color_{target_id}")
+                tmpl_title = st.text_area("메인 타이틀", "프리미엄\n소나무붓\n4종 세트", key=f"tmpl_title_{target_id}")
+                tmpl_sub_top = st.text_input("상단 서브 타이틀", "한 붓의 차이가 작품의 품격을 만듭니다.", key=f"tmpl_sub_top_{target_id}")
+                tmpl_sub_bottom = st.text_input("하단 서브 타이틀", "전통의 깊이, 완성의 차이", key=f"tmpl_sub_bottom_{target_id}")
                 
                 st.markdown("---")
-                if st.button("🔄 위치 0으로 모두 초기화", key="reset_tmpl_pos"):
-                    st.session_state["tmpl_shape_off_x"] = 0
-                    st.session_state["tmpl_text_off_x"] = 0
-                    st.session_state["tmpl_shape_off_y"] = 0
-                    st.session_state["tmpl_text_off_y"] = 0
+                if st.button("🔄 위치 0으로 모두 초기화", key=f"reset_tmpl_pos_{target_id}"):
+                    st.session_state[f"tmpl_shape_off_x_{target_id}"] = 0
+                    st.session_state[f"tmpl_text_off_x_{target_id}"] = 0
+                    st.session_state[f"tmpl_shape_off_y_{target_id}"] = 0
+                    st.session_state[f"tmpl_text_off_y_{target_id}"] = 0
 
                 col_off1, col_off2 = st.columns(2)
                 with col_off1:
-                    tmpl_shape_off_x = st.slider("도형 가로 이동 (좌우)", -1000, 1000, 0, 10, key="tmpl_shape_off_x")
-                    tmpl_text_off_x = st.slider("글씨 가로 이동 (좌우)", -1000, 1000, 0, 10, key="tmpl_text_off_x")
+                    tmpl_shape_off_x = st.slider("도형 가로 이동 (좌우)", -1000, 1000, 0, 10, key=f"tmpl_shape_off_x_{target_id}")
+                    tmpl_text_off_x = st.slider("글씨 가로 이동 (좌우)", -1000, 1000, 0, 10, key=f"tmpl_text_off_x_{target_id}")
                 with col_off2:
-                    tmpl_shape_off_y = st.slider("도형 세로 이동 (상하)", -1000, 1000, 0, 10, key="tmpl_shape_off_y")
-                    tmpl_text_off_y = st.slider("글씨 세로 이동 (상하)", -1000, 1000, 0, 10, key="tmpl_text_off_y")
+                    tmpl_shape_off_y = st.slider("도형 세로 이동 (상하)", -1000, 1000, 0, 10, key=f"tmpl_shape_off_y_{target_id}")
+                    tmpl_text_off_y = st.slider("글씨 세로 이동 (상하)", -1000, 1000, 0, 10, key=f"tmpl_text_off_y_{target_id}")
                     
                 st.markdown("---")
                 col_t1, col_t2, col_t3 = st.columns(3)
                 with col_t1:
-                    tmpl_p1_icon = st.text_input("포인트 1 아이콘", "🎯", key="tmpl_p1_icon")
-                    tmpl_p1_title = st.text_input("포인트 1 제목", "정밀도 98%", key="tmpl_p1_title")
-                    tmpl_p1_desc = st.text_input("포인트 1 설명", "섬세한 표현력", key="tmpl_p1_desc")
+                    tmpl_p1_icon = st.text_input("포인트 1 아이콘", "🎯", key=f"tmpl_p1_icon_{target_id}")
+                    tmpl_p1_title = st.text_input("포인트 1 제목", "정밀도 98%", key=f"tmpl_p1_title_{target_id}")
+                    tmpl_p1_desc = st.text_input("포인트 1 설명", "섬세한 표현력", key=f"tmpl_p1_desc_{target_id}")
                 with col_t2:
-                    tmpl_p2_icon = st.text_input("포인트 2 아이콘", "🖌️", key="tmpl_p2_icon")
-                    tmpl_p2_title = st.text_input("포인트 2 제목", "100% 수제 제작", key="tmpl_p2_title")
-                    tmpl_p2_desc = st.text_input("포인트 2 설명", "장인의 손길로 완성", key="tmpl_p2_desc")
+                    tmpl_p2_icon = st.text_input("포인트 2 아이콘", "🖌️", key=f"tmpl_p2_icon_{target_id}")
+                    tmpl_p2_title = st.text_input("포인트 2 제목", "100% 수제 제작", key=f"tmpl_p2_title_{target_id}")
+                    tmpl_p2_desc = st.text_input("포인트 2 설명", "장인의 손길로 완성", key=f"tmpl_p2_desc_{target_id}")
                 with col_t3:
-                    tmpl_p3_icon = st.text_input("포인트 3 아이콘", "🌿", key="tmpl_p3_icon")
-                    tmpl_p3_title = st.text_input("포인트 3 제목", "천연 소나무 축", key="tmpl_p3_title")
-                    tmpl_p3_desc = st.text_input("포인트 3 설명", "가볍고 균형 잡힌 사용감", key="tmpl_p3_desc")
+                    tmpl_p3_icon = st.text_input("포인트 3 아이콘", "🌿", key=f"tmpl_p3_icon_{target_id}")
+                    tmpl_p3_title = st.text_input("포인트 3 제목", "천연 소나무 축", key=f"tmpl_p3_title_{target_id}")
+                    tmpl_p3_desc = st.text_input("포인트 3 설명", "가볍고 균형 잡힌 사용감", key=f"tmpl_p3_desc_{target_id}")
                 
             st.markdown("---")
             col_save1, col_save2 = st.columns([1, 1])
