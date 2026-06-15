@@ -166,7 +166,8 @@ def render_editor(target_id="hero"):
     pers = st.session_state.get(f"persistent_editor_{target_id}", {})
     for k, v in pers.items():
         if k not in st.session_state:
-            st.session_state[k] = v
+            if "rembg" not in k and "reset" not in k:
+                st.session_state[k] = v
 
     if f'{target_id}_fg_img' in st.session_state and f'{target_id}_bg_img' in st.session_state:
         st.markdown("**[조작 방법]** 슬라이더나 텍스트를 변경하면 아래 결과 이미지가 실시간으로 업데이트됩니다.")
@@ -438,7 +439,8 @@ def render_editor(target_id="hero"):
                 state_dict = {}
                 for k in list(st.session_state.keys()):
                     if k.endswith(f"_{target_id}") and (k.startswith("edit_") or k.startswith("tmpl_")):
-                        state_dict[k] = st.session_state[k]
+                        if "rembg" not in k and "reset" not in k:
+                            state_dict[k] = st.session_state[k]
                 st.session_state[f"persistent_editor_{target_id}"] = state_dict
 
                 if target_id == "hero":
