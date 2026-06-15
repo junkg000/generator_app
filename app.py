@@ -195,12 +195,33 @@ def render_editor(target_id="hero"):
                 shadow_offset_y = st.slider("그림자 상하 위치 조정", -200, 200, 0, 5, key=f'edit_shadow_y_{target_id}')
                 
                 st.markdown("---")
-                if st.button("✨ 원본 이미지 배경 제거 (누끼따기)", key=f"edit_rembg_{target_id}", help="AI가 사진 속 피사체만 남기고 배경을 투명하게 지워줍니다."):
+                st.markdown("**✨ 원본 이미지 배경 제거 (누끼따기)**")
+                rembg_model_label = st.selectbox(
+                    "사용할 AI 엔진 선택 (결과물이 어색할 때 변경해보세요)",
+                    [
+                        "1. 기본 부드러운 모델 (u2net)",
+                        "2. 최신 고성능 모델 (birefnet-general)",
+                        "3. 초정밀 외곽선 모델 (isnet-general-use)",
+                        "4. 테두리 스무딩 적용 (u2net + post process)"
+                    ],
+                    key=f'edit_rembg_model_{target_id}'
+                )
+                
+                if st.button("✂️ 선택한 엔진으로 누끼따기", key=f"edit_rembg_{target_id}", help="AI가 사진 속 피사체만 남기고 배경을 투명하게 지워줍니다."):
                     with st.spinner("AI가 배경을 제거하는 중... 잠시만 기다려주세요!"):
                         from rembg import remove, new_session
-                        # fg_img에 배경 제거 적용 (가장 정교한 isnet-general-use 모델 사용)
-                        session = new_session("isnet-general-use")
-                        out = remove(st.session_state[f'{target_id}_fg_img'], session=session)
+                        
+                        if rembg_model_label.startswith("1"):
+                            out = remove(st.session_state[f'{target_id}_fg_img'])
+                        elif rembg_model_label.startswith("2"):
+                            session = new_session("birefnet-general")
+                            out = remove(st.session_state[f'{target_id}_fg_img'], session=session)
+                        elif rembg_model_label.startswith("3"):
+                            session = new_session("isnet-general-use")
+                            out = remove(st.session_state[f'{target_id}_fg_img'], session=session)
+                        elif rembg_model_label.startswith("4"):
+                            out = remove(st.session_state[f'{target_id}_fg_img'], post_process_mask=True)
+                            
                         st.session_state[f'{target_id}_fg_img'] = out
                         # 렌더링 캐시 초기화
                         st.session_state.pop(f'{target_id}_last_fg_params', None)
