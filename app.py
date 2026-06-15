@@ -162,6 +162,12 @@ def on_hero_change():
 
 @st.dialog("🎨 세부 편집기 (팝업창)", width="large")
 def render_editor(target_id="hero"):
+    # 이전 편집 상태(슬라이더, 텍스트 등) 복구
+    pers = st.session_state.get(f"persistent_editor_{target_id}", {})
+    for k, v in pers.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
     if f'{target_id}_fg_img' in st.session_state and f'{target_id}_bg_img' in st.session_state:
         st.markdown("**[조작 방법]** 슬라이더나 텍스트를 변경하면 아래 결과 이미지가 실시간으로 업데이트됩니다.")
         
@@ -191,8 +197,8 @@ def render_editor(target_id="hero"):
                 if st.button("✨ 원본 이미지 배경 제거 (누끼따기)", key=f"edit_rembg_{target_id}", help="AI가 사진 속 피사체만 남기고 배경을 투명하게 지워줍니다."):
                     with st.spinner("AI가 배경을 제거하는 중... 잠시만 기다려주세요!"):
                         from rembg import remove
-                        # fg_img에 배경 제거 적용
-                        out = remove(st.session_state[f'{target_id}_fg_img'])
+                        # fg_img에 배경 제거 적용 (alpha_matting으로 더 정교하게)
+                        out = remove(st.session_state[f'{target_id}_fg_img'], alpha_matting=True)
                         st.session_state[f'{target_id}_fg_img'] = out
                         # 렌더링 캐시 초기화
                         st.session_state.pop(f'{target_id}_last_fg_params', None)
@@ -428,6 +434,13 @@ def render_editor(target_id="hero"):
             
             # 저장 버튼 동작 처리
             if save_btn:
+                # 현재 에디터의 위젯 상태를 영구 보존용 딕셔너리에 저장
+                state_dict = {}
+                for k in list(st.session_state.keys()):
+                    if k.endswith(f"_{target_id}") and (k.startswith("edit_") or k.startswith("tmpl_")):
+                        state_dict[k] = st.session_state[k]
+                st.session_state[f"persistent_editor_{target_id}"] = state_dict
+
                 if target_id == "hero":
                     st.session_state.hero_ai_b64 = encoded
                     st.session_state.hero_ai_mime = "image/png"
