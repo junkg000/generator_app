@@ -197,9 +197,10 @@ def render_editor(target_id="hero"):
                 st.markdown("---")
                 if st.button("✨ 원본 이미지 배경 제거 (누끼따기)", key=f"edit_rembg_{target_id}", help="AI가 사진 속 피사체만 남기고 배경을 투명하게 지워줍니다."):
                     with st.spinner("AI가 배경을 제거하는 중... 잠시만 기다려주세요!"):
-                        from rembg import remove
-                        # fg_img에 배경 제거 적용 (post_process_mask로 테두리를 더 부드럽게)
-                        out = remove(st.session_state[f'{target_id}_fg_img'], post_process_mask=True)
+                        from rembg import remove, new_session
+                        # fg_img에 배경 제거 적용 (가장 정교한 isnet-general-use 모델 사용)
+                        session = new_session("isnet-general-use")
+                        out = remove(st.session_state[f'{target_id}_fg_img'], session=session)
                         st.session_state[f'{target_id}_fg_img'] = out
                         # 렌더링 캐시 초기화
                         st.session_state.pop(f'{target_id}_last_fg_params', None)
