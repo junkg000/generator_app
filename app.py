@@ -536,8 +536,8 @@ with col1:
 with col2:
     search_kw_default = st.session_state.get('loaded_search_kw', "")
     search_keyword = st.text_input("🔍 인터넷 검색어 (예: 해송 세필붓)", value=search_kw_default)
-    name_default = st.session_state.get('loaded_name', "소나무붓 해송(海松) 4종 세트")
-    product_name = st.text_input("💎 상품명", value=name_default)
+    name_default = st.session_state.get('loaded_name', "")
+    product_name = st.text_input("💎 상품명", value=name_default, placeholder="예시) 소나무붓 해송(海松) 4종 세트")
 
 if hero_file is not None or st.session_state.get('loaded_hero_b64'):
     col_btn1, col_btn2 = st.columns(2)
