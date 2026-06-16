@@ -15,6 +15,36 @@ def get_rembg_session():
     from rembg import new_session
     return new_session('birefnet-general')
 
+def advanced_remove_bg(img_bytes, use_matting=False, model_idx=1, photoroom_key=""):
+    if photoroom_key and photoroom_key.strip():
+        try:
+            import requests
+            url = 'https://sdk.photoroom.com/v1/segment'
+            headers = {'x-api-key': photoroom_key.strip()}
+            files = {'image_file': img_bytes}
+            res = requests.post(url, headers=headers, files=files)
+            if res.status_code == 200:
+                return res.content
+            else:
+                st.toast(f'Photoroom API 오류: {res.text}. 기본 AI로 대체합니다.')
+        except Exception as e:
+            st.toast(f'Photoroom 연동 오류: {e}. 기본 AI로 대체합니다.')
+            
+    # Fallback to rembg
+    from rembg import remove, new_session
+    if model_idx == 1:
+        session = new_session('u2net')
+        return remove(img_bytes, session=session, post_process_mask=False)
+    elif model_idx == 2:
+        session = new_session('birefnet-general')
+        return remove(img_bytes, session=session, post_process_mask=False)
+    elif model_idx == 3:
+        session = new_session('isnet-general-use')
+        return remove(img_bytes, session=session, post_process_mask=False)
+    else:
+        session = get_rembg_session()
+        return remove(img_bytes, session=session, post_process_mask=True, alpha_matting=use_matting)
+
 def remove_small_noise(img):
     try:
         import cv2
@@ -134,6 +164,25 @@ with col_k2:
         time.sleep(0.5)
         st.rerun()
 
+pr_key_path = "photoroom_key.txt"
+saved_pr_key = ""
+if os.path.exists(pr_key_path):
+    with open(pr_key_path, "r", encoding="utf-8") as f:
+        saved_pr_key = f.read().strip()
+
+photoroom_api_key = st.sidebar.text_input("✨ Photoroom API 키 (선택사항)", type="password", value=saved_pr_key, help="포토룸 API 키를 입력하면 기존 무료 AI 대신 포토룸의 초고화질 누끼 AI를 사용합니다.")
+col_pk1, col_pk2 = st.sidebar.columns(2)
+with col_pk1:
+    if st.button("키 저장", key="save_pr"):
+        with open(pr_key_path, "w", encoding="utf-8") as f:
+            f.write(photoroom_api_key)
+        st.sidebar.success("저장 완료!")
+with col_pk2:
+    if st.button("키 삭제", key="del_pr"):
+        if os.path.exists(pr_key_path):
+            os.remove(pr_key_path)
+        st.sidebar.success("삭제 완료!")
+
 st.sidebar.markdown("---")
 st.sidebar.header("📁 보관함 (저장된 제품)")
 saved_folders = sorted(os.listdir(SAVE_DIR), reverse=True) if os.path.exists(SAVE_DIR) else []
@@ -209,18 +258,17 @@ def render_editor(target_id="hero"):
                 
                 if st.button("✂️ 선택한 엔진으로 누끼따기", key=f"edit_rembg_{target_id}", help="AI가 사진 속 피사체만 남기고 배경을 투명하게 지워줍니다."):
                     with st.spinner("AI가 배경을 제거하는 중... 잠시만 기다려주세요!"):
-                        from rembg import remove, new_session
+                        import io
+                        img_byte_arr = io.BytesIO()
+                        st.session_state[f'{target_id}_fg_img'].save(img_byte_arr, format='PNG')
                         
-                        if rembg_model_label.startswith("1"):
-                            out = remove(st.session_state[f'{target_id}_fg_img'])
-                        elif rembg_model_label.startswith("2"):
-                            session = new_session("birefnet-general")
-                            out = remove(st.session_state[f'{target_id}_fg_img'], session=session)
-                        elif rembg_model_label.startswith("3"):
-                            session = new_session("isnet-general-use")
-                            out = remove(st.session_state[f'{target_id}_fg_img'], session=session)
-                        elif rembg_model_label.startswith("4"):
-                            out = remove(st.session_state[f'{target_id}_fg_img'], post_process_mask=True)
+                        m_idx = 0
+                        if rembg_model_label.startswith("1"): m_idx = 1
+                        elif rembg_model_label.startswith("2"): m_idx = 2
+                        elif rembg_model_label.startswith("3"): m_idx = 3
+                        
+                        fg_bytes = advanced_remove_bg(img_byte_arr.getvalue(), use_matting=False, model_idx=m_idx, photoroom_key=photoroom_api_key)
+                        out = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
                             
                         st.session_state[f'{target_id}_fg_img'] = out
                         # 렌더링 캐시 초기화
@@ -517,9 +565,8 @@ with col1:
                 if keep_bg:
                     fg = PIL.Image.open(hero_file).convert("RGBA")
                 else:
-                    from rembg import remove
                     img_bytes = hero_file.getvalue()
-                    fg_bytes = remove(img_bytes, session=get_rembg_session(), post_process_mask=True, alpha_matting=use_matting)
+                    fg_bytes = advanced_remove_bg(img_bytes, use_matting=use_matting, model_idx=0, photoroom_key=photoroom_api_key)
                     fg = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
                 
                 # 기본 배경은 투명으로 설정 (나중에 단색/이미지로 변경 가능)
