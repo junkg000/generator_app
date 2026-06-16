@@ -567,9 +567,9 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             img = PIL.Image.open(io.BytesIO(base64.b64decode(st.session_state.loaded_hero_b64)))
                         
                         if web_info.strip():
-                            prompt = f"상품 메인 사진과 검색정보야.\n[정보]\n{web_info}\n위 [정보]에 나오는 상품의 진짜 의미와 효과(예: 액막이, 재물운, 마음 안정 등)를 반드시 내용에 포함시켜 줘! 구구절절 긴 문장은 절대 피하고, 전체 글자수 50자 이내로 짧고 간결한 쇼핑몰 카피라이팅을 2~3줄로 작성해 줘. (예: 나쁜 기운은 막고, 곁에는 행운만. 당신을 지켜주는 붉은 수호석.)"
+                            prompt = f"상품 메인 사진과 검색정보야.\n[정보]\n{web_info}\n위 [정보]에 나오는 상품의 진짜 의미와 효과(예: 액막이, 재물운, 마음 안정 등)를 반드시 내용에 포함시켜 줘! 구구절절 긴 문장은 절대 피하고, 전체 글자수 50자 이내로 짧고 간결한 쇼핑몰 카피라이팅을 2~3줄로 작성해 줘. (예: 나쁜 기운은 막고, 곁에는 행운만. 당신을 지켜주는 붉은 수호석.)\n\n그리고 이 상품과 관련된 인스타그램 및 쇼핑몰 마케팅용 추천 해시태그 20개를 작성해줘.\n출력 형식은 다음과 같이 구분해줘:\n[카피라이팅]\n(내용)\n[해시태그]\n#태그1 #태그2 ..."
                         else:
-                            prompt = "이 사진의 특징과 디테일을 파악해서, 구구절절 긴 문장은 절대 피하고 전체 글자수 50자 이내로 짧고 간결한 쇼핑몰 카피라이팅을 2~3줄로 작성해 줘. 시선을 확 끄는 핵심 단어 위주로 작성해. (예: 나쁜 기운은 막고, 곁에는 행운만. 당신을 지켜주는 붉은 수호석.)"
+                            prompt = "이 사진의 특징과 디테일을 파악해서, 구구절절 긴 문장은 절대 피하고 전체 글자수 50자 이내로 짧고 간결한 쇼핑몰 카피라이팅을 2~3줄로 작성해 줘. 시선을 확 끄는 핵심 단어 위주로 작성해. (예: 나쁜 기운은 막고, 곁에는 행운만. 당신을 지켜주는 붉은 수호석.)\n\n그리고 이 상품과 관련된 인스타그램 및 쇼핑몰 마케팅용 추천 해시태그 20개를 작성해줘.\n출력 형식은 다음과 같이 구분해줘:\n[카피라이팅]\n(내용)\n[해시태그]\n#태그1 #태그2 ..."
                         
                         try:
                             model = genai.GenerativeModel('gemini-2.5-flash')
@@ -577,7 +577,15 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                         except Exception:
                             model = genai.GenerativeModel('gemini-flash-latest')
                             response = model.generate_content([prompt, img])
-                        st.session_state.auto_desc = response.text
+                            
+                        res_text = response.text
+                        if "[해시태그]" in res_text:
+                            parts = res_text.split("[해시태그]")
+                            st.session_state.auto_desc = parts[0].replace("[카피라이팅]", "").strip()
+                            st.session_state.auto_tags = parts[1].strip()
+                        else:
+                            st.session_state.auto_desc = res_text
+                            st.session_state.auto_tags = ""
                         
                         if hero_file:
                             import base64
@@ -721,6 +729,10 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
 
 desc_default = st.session_state.get('auto_desc', st.session_state.get('loaded_desc', "장인의 손길로 완성된 탄력 있는 붓모..."))
 description = st.text_area("✍️ 메인 상세 설명", value=desc_default, height=150)
+
+if st.session_state.get('auto_tags'):
+    st.markdown("**🏷️ 추천 해시태그 (우측 상단 아이콘을 눌러 복사하세요)**")
+    st.code(st.session_state.auto_tags, language="text")
 
 # ===========================
 # 2. 스토리 블록 (중간 사진 + 글)
