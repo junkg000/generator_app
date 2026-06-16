@@ -540,7 +540,7 @@ with col2:
     product_name = st.text_input("💎 상품명", value=name_default, placeholder="예시) 소나무붓 해송(海松) 4종 세트")
 
 if hero_file is not None or st.session_state.get('loaded_hero_b64'):
-    col_btn1, col_btn2 = st.columns(2)
+    col_btn1, col_btn2 = st.columns([1, 0.01])
     with col_btn1:
         if st.button("✨ 텍스트 자동 작성 (검색 연동)"):
             if not api_key:
@@ -601,136 +601,6 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                         st.rerun()
                     except Exception as e:
                         st.error(f"오류: {e}")
-    with col_btn2:
-        if st.button("🎨 AI 스튜디오 사진 고급화"):
-            if not api_key:
-                st.error("👈 좌측 사이드바에 API 키를 입력해주세요!")
-            else:
-                with st.spinner("AI가 4가지 테마의 고급 배경을 생성 중입니다... (약 10~20초 소요) 🎨"):
-                    try:
-                        genai.configure(api_key=api_key)
-                        if hero_file:
-                            img = PIL.Image.open(hero_file)
-                        else:
-                            import base64
-                            img = PIL.Image.open(io.BytesIO(base64.b64decode(st.session_state.loaded_hero_b64)))
-                        
-                        try:
-                            # 1. 원본 피사체 배경 제거 (rembg)
-                            from rembg import remove
-                            img_byte_arr = io.BytesIO()
-                            img.save(img_byte_arr, format='PNG')
-                            fg_bytes = remove(img_byte_arr.getvalue(), session=get_rembg_session(), post_process_mask=True)
-                            fg_img = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
-                            fg_img = remove_small_noise(fg_img)
-                            
-                            # 2. 고급 배경 AI 생성 (4가지 테마)
-                            bg_prompts = [
-                                "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text.",
-                                "A bright and airy minimalist studio background with soft natural morning light and gentle shadows, pure white marble surface, 8k resolution, completely empty, no text.",
-                                "A luxurious warm gold and beige studio background, soft bokeh, high-end product photography style, completely empty, 8k resolution, no text.",
-                                "A modern abstract geometric background in pastel tones, soft lighting, 3d render style, completely empty, perfect for product placement, no text."
-                            ]
-                            model = genai.GenerativeModel('models/gemini-2.5-flash-image')
-                            
-                            generated_bgs = []
-                            import concurrent.futures
-                            
-                            def generate_single_bg(prompt):
-                                try:
-                                    res = model.generate_content(prompt)
-                                    return res.candidates[0].content.parts[0].inline_data.data
-                                except Exception:
-                                    return None
-                                    
-                            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-                                results = executor.map(generate_single_bg, bg_prompts)
-                                
-                            for b_data in results:
-                                if b_data:
-                                    generated_bgs.append(b_data)
-                            
-                            # 항상 4개의 배경을 보장 (API 필터링/에러 대비 파이썬 직접 렌더링)
-                            from PIL import ImageDraw
-                            import io
-                            def create_fallback_bg(theme_idx, size):
-                                bg = PIL.Image.new("RGBA", size, (255, 255, 255, 255))
-                                draw = ImageDraw.Draw(bg)
-                                if theme_idx == 0:
-                                    for y in range(size[1]):
-                                        ratio = y / size[1]
-                                        r, g, b = int(58 - 45 * ratio), int(62 - 48 * ratio), int(71 - 54 * ratio)
-                                        draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
-                                elif theme_idx == 1:
-                                    for y in range(size[1]):
-                                        ratio = y / size[1]
-                                        r, g, b = int(255 - 20 * ratio), int(255 - 20 * ratio), int(255 - 15 * ratio)
-                                        draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
-                                elif theme_idx == 2:
-                                    for y in range(size[1]):
-                                        ratio = y / size[1]
-                                        r, g, b = int(245 - 30 * ratio), int(230 - 30 * ratio), int(200 - 40 * ratio)
-                                        draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
-                                else:
-                                    for y in range(size[1]):
-                                        ratio = y / size[1]
-                                        r, g, b = int(230 - 10 * ratio), int(240 - 20 * ratio), int(255 - 10 * ratio)
-                                        draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
-                                return bg
-                            
-                            while len(generated_bgs) < 4:
-                                fb = create_fallback_bg(len(generated_bgs), fg_img.size)
-                                out_b = io.BytesIO()
-                                fb.save(out_b, format='PNG')
-                                generated_bgs.append(out_b.getvalue())
-                                
-                            st.session_state.hero_ai_bg_candidates = generated_bgs
-                            bg_img = PIL.Image.open(io.BytesIO(generated_bgs[0])).convert("RGBA")
-                            
-                            # 3. 배경을 원본 사진과 완전히 동일한 크기/비율로 맞추기
-                            fg_ratio = fg_img.size[0] / fg_img.size[1]
-                            bg_ratio = bg_img.size[0] / bg_img.size[1]
-                            
-                            if fg_ratio > bg_ratio:
-                                new_bg_h = int(bg_img.size[0] / fg_ratio)
-                                top = (bg_img.size[1] - new_bg_h) // 2
-                                bg_img = bg_img.crop((0, top, bg_img.size[0], top + new_bg_h))
-                            else:
-                                new_bg_w = int(bg_img.size[1] * fg_ratio)
-                                left = (bg_img.size[0] - new_bg_w) // 2
-                                bg_img = bg_img.crop((left, 0, left + new_bg_w, bg_img.size[1]))
-                                
-                            bg_img = bg_img.resize(fg_img.size, PIL.Image.Resampling.LANCZOS)
-                            
-                            st.session_state.hero_fg_img = fg_img.copy()
-                            st.session_state.hero_bg_img = bg_img.copy()
-                            
-                            # 그림자 생성 (원본 크기에 맞춤)
-                            from PIL import ImageFilter
-                            shadow = PIL.Image.new("RGBA", fg_img.size, (0, 0, 0, 0))
-                            shadow.paste((0, 0, 0, 180), (0, 0), mask=fg_img)
-                            shadow = shadow.filter(ImageFilter.GaussianBlur(radius=int(max(fg_img.size)*0.01)))
-                            
-                            offset_y = int(max(fg_img.size)*0.02)
-                            bg_img.paste(shadow, (0, offset_y), mask=shadow)
-                            
-                            # 원본 피사체를 원래 위치 그대로(0,0) 합성
-                            bg_img.paste(fg_img, (0, 0), mask=fg_img)
-                            
-                            out_bytes = io.BytesIO()
-                            bg_img.convert("RGB").save(out_bytes, format='PNG')
-                            generated_bytes = out_bytes.getvalue()
-                            mime_type = "image/png"
-                        except Exception as e:
-                            st.error(f"합성 오류: {e}")
-                            st.stop()
-                        import base64
-                        st.session_state.hero_ai_b64 = base64.b64encode(generated_bytes).decode('utf-8')
-                        st.session_state.hero_ai_mime = mime_type
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"오류: {e}")
-
 desc_default = st.session_state.get('auto_desc', st.session_state.get('loaded_desc', "장인의 손길로 완성된 탄력 있는 붓모..."))
 description = st.text_area("✍️ 메인 상세 설명", value=desc_default, height=150)
 

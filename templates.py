@@ -43,7 +43,7 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         col_w = W // 3
         for idx, (icon, title, desc) in enumerate(points):
             cx = idx * col_w + (col_w // 2)
-            icon_x, text_x = cx - int(col_w * 0.25), cx - int(col_w * 0.05)
+            icon_x, text_x = cx - int(col_w * 0.35), cx - int(col_w * 0.15)
             draw_text_with_fallback(draw_t, (icon_x, banner_y + banner_h*0.5), icon, f_icon, "white", "mm")
             draw_text_with_fallback(draw_t, (text_x, banner_y + banner_h*0.35), title, f_p_title, "white", "lm")
             draw_text_with_fallback(draw_t, (text_x, banner_y + banner_h*0.65), desc, f_p_desc, "#DDDDDD", "lm")
