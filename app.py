@@ -552,9 +552,13 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                         if search_keyword.strip():
                             try:
                                 with DDGS() as ddgs:
-                                    results = ddgs.text(f"{search_keyword}", max_results=5)
-                                    for res in results:
-                                        web_info += f"- {res['title']}: {res['body']}\n"
+                                    results1 = ddgs.text(f"{search_keyword}", max_results=3)
+                                    for res in results1:
+                                        web_info += f"- [일반정보] {res['title']}: {res['body']}\n"
+                                        
+                                    results2 = ddgs.text(f"{search_keyword} 네이버 블로그 쇼핑 리뷰", max_results=3)
+                                    for res in results2:
+                                        web_info += f"- [네이버리뷰] {res['title']}: {res['body']}\n"
                                 st.session_state.last_web_info = web_info
                             except Exception:
                                 pass
@@ -567,9 +571,9 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             img = PIL.Image.open(io.BytesIO(base64.b64decode(st.session_state.loaded_hero_b64)))
                         
                         if web_info.strip():
-                            prompt = f"상품 메인 사진과 검색정보야.\n[정보]\n{web_info}\n위 [정보]에 나오는 상품의 진짜 의미와 효과(예: 액막이, 재물운, 마음 안정 등)를 반드시 내용에 포함시켜 줘! 구구절절 긴 문장은 절대 피하고, 전체 글자수 50자 이내로 짧고 간결한 쇼핑몰 카피라이팅을 2~3줄로 작성해 줘. (예: 나쁜 기운은 막고, 곁에는 행운만. 당신을 지켜주는 붉은 수호석.)\n\n그리고 이 상품과 관련된 인스타그램 및 쇼핑몰 마케팅용 추천 해시태그 20개를 작성해줘. 단, 한 줄에 모두 적지 말고 10개씩 2줄로 나누어서 작성해 줘.\n출력 형식은 다음과 같이 구분해줘:\n[카피라이팅]\n(내용)\n[해시태그]\n#태그1 #태그2 ... (10개)\n#태그11 #태그12 ... (10개)"
+                            prompt = f"상품 메인 사진과 검색정보야.\n[정보]\n{web_info}\n위 [정보]에 나오는 상품의 진짜 의미와 효과, 특히 네이버 블로그나 쇼핑 리뷰에서 사람들이 자주 언급하는 장점을 반드시 내용에 포함시켜 줘! 구구절절 긴 문장은 절대 피하고, 전체 글자수 50자 이내로 네이버 스마트스토어에 올리기 딱 좋은 간결하고 시선을 끄는 카피라이팅을 2~3줄로 작성해 줘.\n\n그리고 이 상품과 관련된 '네이버 스마트스토어' 및 '인스타그램' 마케팅용 추천 해시태그 20개를 작성해줘. 단, 한 줄에 모두 적지 말고 10개씩 2줄로 나누어서 작성해 줘.\n출력 형식은 다음과 같이 구분해줘:\n[카피라이팅]\n(내용)\n[해시태그]\n#태그1 #태그2 ... (10개)\n#태그11 #태그12 ... (10개)"
                         else:
-                            prompt = "이 사진의 특징과 디테일을 파악해서, 구구절절 긴 문장은 절대 피하고 전체 글자수 50자 이내로 짧고 간결한 쇼핑몰 카피라이팅을 2~3줄로 작성해 줘. 시선을 확 끄는 핵심 단어 위주로 작성해. (예: 나쁜 기운은 막고, 곁에는 행운만. 당신을 지켜주는 붉은 수호석.)\n\n그리고 이 상품과 관련된 인스타그램 및 쇼핑몰 마케팅용 추천 해시태그 20개를 작성해줘. 단, 한 줄에 모두 적지 말고 10개씩 2줄로 나누어서 작성해 줘.\n출력 형식은 다음과 같이 구분해줘:\n[카피라이팅]\n(내용)\n[해시태그]\n#태그1 #태그2 ... (10개)\n#태그11 #태그12 ... (10개)"
+                            prompt = "이 사진의 특징과 디테일을 파악해서, 구구절절 긴 문장은 절대 피하고 전체 글자수 50자 이내로 네이버 스마트스토어에 올리기 딱 좋은 간결하고 시선을 끄는 카피라이팅을 2~3줄로 작성해 줘.\n\n그리고 이 상품과 관련된 '네이버 쇼핑' 및 '인스타그램' 마케팅용 추천 해시태그 20개를 작성해줘. 단, 한 줄에 모두 적지 말고 10개씩 2줄로 나누어서 작성해 줘.\n출력 형식은 다음과 같이 구분해줘:\n[카피라이팅]\n(내용)\n[해시태그]\n#태그1 #태그2 ... (10개)\n#태그11 #태그12 ... (10개)"
                         
                         try:
                             model = genai.GenerativeModel('gemini-2.5-flash')
