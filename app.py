@@ -232,6 +232,7 @@ def render_editor(target_id="hero"):
             tab1, tab2, tab3, tab4 = st.tabs(["🎯 피사체 조절", "🖼️ 배경 변경", "✍️ 글씨 오버레이", "✨ 포스터 템플릿"])
             
             with tab1:
+                rotation = st.slider("회전 (각도)", -180, 180, 0, 1, key=f'edit_rotation_{target_id}')
                 scale = st.slider("피사체 크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, key=f'edit_scale_{target_id}')
                 offset_x = st.slider("가로 위치 (X)", -1000, 1000, 0, 10, key=f'edit_x_{target_id}')
                 offset_y = st.slider("세로 위치 (Y)", -1000, 1000, 0, 10, key=f'edit_y_{target_id}')
@@ -374,7 +375,7 @@ def render_editor(target_id="hero"):
             bg_base = st.session_state[f'{target_id}_bg_img']
             
             # 1. FG 및 그림자 캐싱
-            current_fg_params = (erode_size, scale, shadow_intensity, shadow_blur)
+            current_fg_params = (erode_size, scale, shadow_intensity, shadow_blur, rotation)
             if st.session_state.get(f'{target_id}_last_fg_params') != current_fg_params:
                 temp_fg = fg.copy()
                 if erode_size > 0:
@@ -387,6 +388,9 @@ def render_editor(target_id="hero"):
                     alpha = cv2.GaussianBlur(alpha, (3, 3), 0)
                     arr[:, :, 3] = alpha
                     temp_fg = PIL.Image.fromarray(arr)
+                
+                if rotation != 0:
+                    temp_fg = temp_fg.rotate(-rotation, expand=True, resample=PIL.Image.Resampling.BICUBIC)
                 
                 new_size = (int(temp_fg.size[0] * scale), int(temp_fg.size[1] * scale))
                 if new_size[0] > 0 and new_size[1] > 0:
