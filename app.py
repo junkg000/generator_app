@@ -232,17 +232,17 @@ def render_editor(target_id="hero"):
             tab1, tab2, tab3, tab4 = st.tabs(["🎯 피사체 조절", "🖼️ 배경 변경", "✍️ 글씨 오버레이", "✨ 포스터 템플릿"])
             
             with tab1:
-                rotation = st.slider("회전 (각도)", -180, 180, 0, 1, key=f'edit_rotation_{target_id}')
-                scale = st.slider("피사체 크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, key=f'edit_scale_{target_id}')
-                offset_x = st.slider("가로 위치 (X)", -1000, 1000, 0, 10, key=f'edit_x_{target_id}')
-                offset_y = st.slider("세로 위치 (Y)", -1000, 1000, 0, 10, key=f'edit_y_{target_id}')
-                erode_size = st.slider("테두리 색번짐 제거 (픽셀 깎기)", 0, 10, 0, 1, key=f'edit_erode_{target_id}')
+                rotation = st.number_input("회전 (각도)", min_value=-180, max_value=180, value=0, step=1, key=f'edit_rotation_{target_id}')
+                scale = st.number_input("피사체 크기 조절 (배율)", min_value=0.1, max_value=2.0, value=1.0, step=0.05, key=f'edit_scale_{target_id}')
+                offset_x = st.number_input("가로 위치 (X)", min_value=-1000, max_value=1000, value=0, step=10, key=f'edit_x_{target_id}')
+                offset_y = st.number_input("세로 위치 (Y)", min_value=-1000, max_value=1000, value=0, step=10, key=f'edit_y_{target_id}')
+                erode_size = st.number_input("테두리 색번짐 제거 (픽셀 깎기)", min_value=0, max_value=10, value=0, step=1, key=f'edit_erode_{target_id}')
                 
                 st.markdown("---")
                 st.markdown("**그림자 세밀 조절**")
-                shadow_intensity = st.slider("그림자 진하기 (투명도)", 0, 255, 180, 10, key=f'edit_shadow_int_{target_id}')
-                shadow_blur = st.slider("그림자 퍼짐 정도 (크기/블러)", 0, 10, 1, 1, key=f'edit_shadow_blur_{target_id}')
-                shadow_offset_y = st.slider("그림자 상하 위치 조정", -200, 200, 0, 5, key=f'edit_shadow_y_{target_id}')
+                shadow_intensity = st.number_input("그림자 진하기 (투명도)", min_value=0, max_value=255, value=180, step=10, key=f'edit_shadow_int_{target_id}')
+                shadow_blur = st.number_input("그림자 퍼짐 정도 (크기/블러)", min_value=0, max_value=10, value=1, step=1, key=f'edit_shadow_blur_{target_id}')
+                shadow_offset_y = st.number_input("그림자 상하 위치 조정", min_value=-200, max_value=200, value=0, step=5, key=f'edit_shadow_y_{target_id}')
                 
                 st.markdown("---")
                 st.markdown("**✨ 원본 이미지 배경 제거 (누끼따기)**")
