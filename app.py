@@ -259,6 +259,7 @@ def render_editor(target_id="hero"):
                 if st.button("✂️ 선택한 엔진으로 누끼따기", key=f"edit_rembg_{target_id}", help="AI가 사진 속 피사체만 남기고 배경을 투명하게 지워줍니다."):
                     with st.spinner("AI가 배경을 제거하는 중... 잠시만 기다려주세요!"):
                         import io
+                        import PIL.Image
                         img_byte_arr = io.BytesIO()
                         st.session_state[f'{target_id}_fg_img'].save(img_byte_arr, format='PNG')
                         
