@@ -215,9 +215,13 @@ def synced_slider(label, min_val, max_val, default_val, step, key_prefix):
         st.session_state[val_key] = default_val
 
     def on_slider():
-        st.session_state[val_key] = st.session_state[f"{key_prefix}_slider"]
+        v = st.session_state[f"{key_prefix}_slider"]
+        st.session_state[val_key] = v
+        st.session_state[f"{key_prefix}_num"] = v
     def on_num():
-        st.session_state[val_key] = st.session_state[f"{key_prefix}_num"]
+        v = st.session_state[f"{key_prefix}_num"]
+        st.session_state[val_key] = v
+        st.session_state[f"{key_prefix}_slider"] = v
 
     col1, col2 = st.columns([3, 1])
     with col1:
