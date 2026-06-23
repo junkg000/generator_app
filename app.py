@@ -410,7 +410,7 @@ def render_editor(target_id="hero"):
                                     generated_bgs = []
                                     def generate_single_bg(prompt):
                                         try:
-                                            res = model.generate_content([fg_for_prompt, prompt])
+                                            res = model.generate_content(prompt)
                                             return res.candidates[0].content.parts[0].inline_data.data
                                         except Exception:
                                             return None
@@ -1074,7 +1074,7 @@ for i in range(5):
                                     import concurrent.futures
                                     def generate_single_bg(prompt):
                                         try:
-                                            res = model.generate_content([fg_img, prompt])
+                                            res = model.generate_content(prompt)
                                             return res.candidates[0].content.parts[0].inline_data.data
                                         except Exception:
                                             return None
