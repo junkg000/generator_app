@@ -83,11 +83,11 @@ def load_product(folder_name):
             st.session_state.loaded_desc = data.get("description", "")
             st.session_state.loaded_search_kw = data.get("search_keyword", "")
             
-            st.session_state.loaded_brand = data.get("brand_name", "")
-            st.session_state.loaded_modifier = data.get("modifier", "")
-            st.session_state.loaded_main_kw = data.get("main_keyword", data.get("name", ""))
-            st.session_state.loaded_sub1 = data.get("sub_keyword1", "")
-            st.session_state.loaded_sub2 = data.get("sub_keyword2", "")
+            st.session_state.kw_brand = data.get("brand_name", "")
+            st.session_state.kw_modifier = data.get("modifier", "")
+            st.session_state.kw_main = data.get("main_keyword", data.get("name", ""))
+            st.session_state.kw_sub1 = data.get("sub_keyword1", "")
+            st.session_state.kw_sub2 = data.get("sub_keyword2", "")
             st.session_state.loaded_cs_opt = data.get("cs_option", "옵션 A: 해송 (010-4506-0728)")
             st.session_state.loaded_hero_b64 = data.get("hero_b64", "")
             st.session_state.loaded_mime_hero = data.get("mime_hero", "")
@@ -618,15 +618,51 @@ with col1:
         st.image(base64.b64decode(st.session_state.loaded_hero_b64), width=450)
         st.info("✅ AI 생성/보관함 이미지가 대기 중입니다.")
 with col2:
-    st.markdown("**📦 상품 키워드 입력**")
+    if "kw_brand" not in st.session_state: st.session_state.kw_brand = ""
+    if "kw_main" not in st.session_state: st.session_state.kw_main = ""
+    if "kw_modifier" not in st.session_state: st.session_state.kw_modifier = ""
+    if "kw_sub1" not in st.session_state: st.session_state.kw_sub1 = ""
+    if "kw_sub2" not in st.session_state: st.session_state.kw_sub2 = ""
+
+    def auto_fill_keywords():
+        if not st.session_state.kw_main.strip():
+            st.toast("⚠️ 메인 키워드를 먼저 입력해주세요!")
+            return
+        if not api_key:
+            st.toast("⚠️ 좌측 사이드바에 API 키를 입력해주세요!")
+            return
+        try:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            prompt = f"다음 핵심 상품 키워드 '{st.session_state.kw_main}'를 기반으로 네이버 스마트스토어 상품명 최적화 공식을 완성해줘. JSON 형식으로만 응답해. 키는 'brand', 'modifier', 'sub1', 'sub2'야. 브랜드명은 가상으로 자연스럽게 지어줘. 출력 예시: {{\"brand\": \"해송\", \"modifier\": \"초보자용 부드러운\", \"sub1\": \"민화붓\", \"sub2\": \"캘리그라피\"}}"
+            response = model.generate_content(prompt)
+            import json
+            res_text = response.text.strip()
+            if res_text.startswith("```json"): res_text = res_text[7:]
+            if res_text.startswith("```"): res_text = res_text[3:]
+            if res_text.endswith("```"): res_text = res_text[:-3]
+            parsed = json.loads(res_text.strip())
+            st.session_state.kw_brand = parsed.get("brand", "")
+            st.session_state.kw_modifier = parsed.get("modifier", "")
+            st.session_state.kw_sub1 = parsed.get("sub1", "")
+            st.session_state.kw_sub2 = parsed.get("sub2", "")
+        except Exception as e:
+            st.toast(f"❌ AI 분석 실패: {e}")
+
+    col_ai1, col_ai2 = st.columns([1, 1])
+    with col_ai1:
+        st.markdown("**📦 상품 키워드 입력**")
+    with col_ai2:
+        st.button("✨ 빈칸 AI 자동 추천", on_click=auto_fill_keywords, use_container_width=True)
+
     kw_col1, kw_col2 = st.columns(2)
     with kw_col1:
-        brand_name = st.text_input("브랜드명", value=st.session_state.get('loaded_brand', ''), placeholder="예: 해송")
-        main_keyword = st.text_input("메인 키워드 (필수)", value=st.session_state.get('loaded_main_kw', ''), placeholder="예: 세필붓")
-        sub_keyword1 = st.text_input("서브 키워드 1", value=st.session_state.get('loaded_sub1', ''), placeholder="예: 민화붓")
+        brand_name = st.text_input("브랜드명", key="kw_brand", placeholder="예: 해송")
+        main_keyword = st.text_input("메인 키워드 (필수)", key="kw_main", placeholder="예: 세필붓")
+        sub_keyword1 = st.text_input("서브 키워드 1", key="kw_sub1", placeholder="예: 민화붓")
     with kw_col2:
-        modifier = st.text_input("수식어", value=st.session_state.get('loaded_modifier', ''), placeholder="예: 부드러운")
-        sub_keyword2 = st.text_input("서브 키워드 2", value=st.session_state.get('loaded_sub2', ''), placeholder="예: 동양화")
+        modifier = st.text_input("수식어", key="kw_modifier", placeholder="예: 부드러운")
+        sub_keyword2 = st.text_input("서브 키워드 2", key="kw_sub2", placeholder="예: 동양화")
 
     parts = []
     if brand_name.strip(): parts.append(f"[{brand_name.strip()}]")
