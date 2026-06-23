@@ -84,12 +84,17 @@ You are a professional product photography art director. Analyze the provided im
 Provide exactly 4 high-quality image generation prompts for an Inpainting model to generate a realistic background AND human interaction.
 The object in the image will be PERFECTLY PRESERVED. Your prompt must describe the ENTIRE scene seamlessly blending with the object.
 The prompts must be in English.
+CRITICAL RULES: 
+- MUST be hyper-realistic, high-end commercial e-commerce photography.
+- NO fantasy, NO magical elements, NO glowing auras, NO floating objects. 
+- Must look like a real photo taken with a DSLR camera (e.g., 85mm lens, beautiful bokeh, studio lighting or natural sunlight).
+
 Requirements for the 4 backgrounds:
-1. "studio_1": A premium studio setting with realistic shadows wrapping around the object. (e.g., resting on elegant marble).
-2. "studio_2": A beautiful model naturally WEARING or HOLDING the object. Describe the model's hand, wrist, or neck holding/wearing it with realistic skin textures and lighting.
-3. "lifestyle": A realistic lifestyle setting where the object is placed or used by someone in a cozy environment.
-4. "creative": The object being held or worn in a highly creative, cinematic, or thematic environment.
-CRITICAL: Do NOT say "empty in the center". The object is already there. You must describe the person wearing it or the environment interacting with it!
+1. "studio_1": A premium dark studio setting (e.g., dark slate or black marble) with realistic soft lighting and shadows wrapping around the object. 
+2. "studio_2": A beautiful human model naturally WEARING or HOLDING the object. Describe the model's skin texture, realistic wrist/hand/neck, and clean lighting. MUST look like a real fashion photoshoot.
+3. "lifestyle": A realistic lifestyle setting with bright, warm colors (e.g., beige and gold tones, cozy sunlight, soft fabrics).
+4. "creative": A modern, pastel-toned room or clean creative space (e.g., soft pink/blue pastel background, modern props).
+CRITICAL: Do NOT say "empty in the center". The object is already there. Describe the person wearing it or the environment interacting with it!
 Return ONLY a valid JSON object with the keys "studio_1", "studio_2", "lifestyle", "creative", and the prompt strings as values.
 '''
         else:
@@ -567,7 +572,7 @@ def render_editor(target_id="hero"):
                                     st.error(f"AI 배경 생성 실패: {e}")
 
                     if f'{target_id}_ai_bg_candidates' in st.session_state and len(st.session_state[f'{target_id}_ai_bg_candidates']) > 0:
-                        theme_names = ["1. 다크 스튜디오", "2. 밝은 대리석", "3. 골드 & 베이지", "4. 파스텔 기하학"]
+                        theme_names = ["1. 다크 스튜디오", "2. 리얼 모델 착용샷", "3. 포근한 라이프스타일", "4. 모던 파스텔 룸"]
                         opts = theme_names[:len(st.session_state[f'{target_id}_ai_bg_candidates'])]
                         selected_theme = st.selectbox("✨ 4가지 AI 배경 중 선택", opts, key=f'edit_ai_bg_idx_{target_id}')
                         ai_bg_index = opts.index(selected_theme)
