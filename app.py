@@ -71,13 +71,29 @@ def generate_replicate_bg(prompt, fg_img, replicate_key):
         print("Replicate Error:", e)
         return None
 
-def generate_contextual_prompts(fg_img, api_key):
+def generate_contextual_prompts(fg_img, api_key, use_replicate=False):
     import google.generativeai as genai
     import json
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
-        prompt = '''
+        
+        if use_replicate:
+            prompt = '''
+You are a professional product photography art director. Analyze the provided image.
+Provide exactly 4 high-quality image generation prompts for an Inpainting model to generate a realistic background AND human interaction.
+The object in the image will be PERFECTLY PRESERVED. Your prompt must describe the ENTIRE scene seamlessly blending with the object.
+The prompts must be in English.
+Requirements for the 4 backgrounds:
+1. "studio_1": A premium studio setting with realistic shadows wrapping around the object. (e.g., resting on elegant marble).
+2. "studio_2": A beautiful model naturally WEARING or HOLDING the object. Describe the model's hand, wrist, or neck holding/wearing it with realistic skin textures and lighting.
+3. "lifestyle": A realistic lifestyle setting where the object is placed or used by someone in a cozy environment.
+4. "creative": The object being held or worn in a highly creative, cinematic, or thematic environment.
+CRITICAL: Do NOT say "empty in the center". The object is already there. You must describe the person wearing it or the environment interacting with it!
+Return ONLY a valid JSON object with the keys "studio_1", "studio_2", "lifestyle", "creative", and the prompt strings as values.
+'''
+        else:
+            prompt = '''
 You are a professional product photography art director. Analyze the provided image (which is a subject with its background removed).
 Provide exactly 4 high-quality image generation prompts to create a background that perfectly matches this subject.
 The prompts must be in English and optimized for an image generation model (like Imagen or Midjourney).
@@ -89,6 +105,7 @@ Requirements for the 4 backgrounds:
 Important: The background must be completely empty in the center where the subject will be placed. End each prompt with "completely empty in the center, perfect for product placement, no text, 8k resolution".
 Return ONLY a valid JSON object with the keys "studio_1", "studio_2", "lifestyle", "creative", and the prompt strings as values.
 '''
+
         res = model.generate_content([prompt, fg_img])
         data = json.loads(res.text)
         return [
@@ -492,7 +509,14 @@ def render_editor(target_id="hero"):
                                     genai.configure(api_key=saved_key)
                                     model = genai.GenerativeModel('models/gemini-2.5-flash-image')
                                     fg_for_prompt = st.session_state[f'{target_id}_fg_img']
-                                    bg_prompts = generate_contextual_prompts(fg_for_prompt, saved_key)
+                                    
+                                    import os
+                                    rep_key = ""
+                                    if os.path.exists("replicate_key.txt"):
+                                        with open("replicate_key.txt", "r", encoding="utf-8") as f:
+                                            rep_key = f.read().strip()
+                                            
+                                    bg_prompts = generate_contextual_prompts(fg_for_prompt, saved_key, use_replicate=bool(rep_key))
                                     generated_bgs = []
                                     def generate_single_bg(prompt):
                                         import os
