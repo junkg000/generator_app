@@ -268,7 +268,7 @@ def render_editor(target_id="hero"):
                 scale = synced_slider("피사체 크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, f'edit_scale_{target_id}')
                 offset_x = synced_slider("가로 위치 (X)", -1000, 1000, 0, 10, f'edit_x_{target_id}')
                 offset_y = synced_slider("세로 위치 (Y)", -1000, 1000, 0, 10, f'edit_y_{target_id}')
-                fill_blur_bg = st.toggle("✨ 빈 공간을 원본 사진 블러로 채우기", value=False, key=f'edit_fill_blur_{target_id}')
+                fill_option = st.selectbox("✨ 여백 채우기 옵션", ["사용 안 함", "1. 원본 사진 블러 채우기", "2. 가장자리 픽셀 쭉 늘리기", "3. 거울 반사 (데칼코마니)"], key=f'edit_fill_opt_{target_id}')
                 erode_size = synced_slider("테두리 색번짐 제거 (픽셀 깎기)", 0, 10, 0, 1, f'edit_erode_{target_id}')
                 
                 st.markdown("---")
@@ -475,6 +475,7 @@ def render_editor(target_id="hero"):
 
             # 2. BG 캐싱
             bg_up_val = bg_upload.getvalue() if bg_upload is not None else None
+            fill_blur_bg = (fill_option == "1. 원본 사진 블러 채우기")
             current_bg_params = (bg_up_val, use_solid_bg, bg_color, ai_bg_index, fill_blur_bg)
             if st.session_state.get(f'{target_id}_last_bg_params') != current_bg_params:
                 if fill_blur_bg:
@@ -511,6 +512,18 @@ def render_editor(target_id="hero"):
             shadow_y = cy + int(max(new_size)*0.02) + shadow_offset_y
             
             temp_layer = PIL.Image.new("RGBA", bg.size, (0, 0, 0, 0))
+            
+            if fill_option in ["2. 가장자리 픽셀 쭉 늘리기", "3. 거울 반사 (데칼코마니)"]:
+                import cv2
+                import numpy as np
+                arr = np.array(fg) # RGBA array
+                pad_x = bg.size[0]
+                pad_y = bg.size[1]
+                btype = cv2.BORDER_REPLICATE if "2." in fill_option else cv2.BORDER_REFLECT_101
+                padded_arr = cv2.copyMakeBorder(arr, pad_y, pad_y, pad_x, pad_x, btype)
+                padded_fg = PIL.Image.fromarray(padded_arr, "RGBA")
+                temp_layer.paste(padded_fg, (cx - pad_x, cy - pad_y))
+
             if shadow_intensity > 0:
                 temp_layer.paste(shadow, (cx, shadow_y), mask=shadow)
             temp_layer.paste(fg, (cx, cy), mask=fg)
