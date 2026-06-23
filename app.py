@@ -82,6 +82,12 @@ def load_product(folder_name):
             st.session_state.loaded_name = data.get("name", "")
             st.session_state.loaded_desc = data.get("description", "")
             st.session_state.loaded_search_kw = data.get("search_keyword", "")
+            
+            st.session_state.loaded_brand = data.get("brand_name", "")
+            st.session_state.loaded_modifier = data.get("modifier", "")
+            st.session_state.loaded_main_kw = data.get("main_keyword", data.get("name", ""))
+            st.session_state.loaded_sub1 = data.get("sub_keyword1", "")
+            st.session_state.loaded_sub2 = data.get("sub_keyword2", "")
             st.session_state.loaded_cs_opt = data.get("cs_option", "옵션 A: 해송 (010-4506-0728)")
             st.session_state.loaded_hero_b64 = data.get("hero_b64", "")
             st.session_state.loaded_mime_hero = data.get("mime_hero", "")
@@ -111,7 +117,7 @@ def optimize_image(uploaded_file, max_width=860, quality=80):
     img.save(buffered, format="JPEG", quality=quality)
     return base64.b64encode(buffered.getvalue()).decode(), "image/jpeg"
 
-def save_product(name, desc, search_kw, cs_opt, hero_b64, mime_hero, story_blocks):
+def save_product(name, desc, search_kw, cs_opt, hero_b64, mime_hero, story_blocks, brand_name="", modifier="", main_keyword="", sub_keyword1="", sub_keyword2=""):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_name = "".join([c for c in name if c.isalpha() or c.isdigit() or c.isspace()]).rstrip()
     if not safe_name: safe_name = "product"
@@ -123,6 +129,11 @@ def save_product(name, desc, search_kw, cs_opt, hero_b64, mime_hero, story_block
         "name": name,
         "description": desc,
         "search_keyword": search_kw,
+        "brand_name": brand_name,
+        "modifier": modifier,
+        "main_keyword": main_keyword,
+        "sub_keyword1": sub_keyword1,
+        "sub_keyword2": sub_keyword2,
         "cs_option": cs_opt,
         "hero_b64": hero_b64,
         "mime_hero": mime_hero,
@@ -607,10 +618,26 @@ with col1:
         st.image(base64.b64decode(st.session_state.loaded_hero_b64), width=450)
         st.info("✅ AI 생성/보관함 이미지가 대기 중입니다.")
 with col2:
-    search_kw_default = st.session_state.get('loaded_search_kw', "")
-    search_keyword = st.text_input("🔍 인터넷 검색어 (예: 해송 세필붓)", value=search_kw_default)
-    name_default = st.session_state.get('loaded_name', "")
-    product_name = st.text_input("💎 상품명", value=name_default, placeholder="예시) 소나무붓 해송(海松) 4종 세트")
+    st.markdown("**📦 상품 키워드 입력**")
+    kw_col1, kw_col2 = st.columns(2)
+    with kw_col1:
+        brand_name = st.text_input("브랜드명", value=st.session_state.get('loaded_brand', ''), placeholder="예: 해송")
+        main_keyword = st.text_input("메인 키워드 (필수)", value=st.session_state.get('loaded_main_kw', ''), placeholder="예: 세필붓")
+        sub_keyword1 = st.text_input("서브 키워드 1", value=st.session_state.get('loaded_sub1', ''), placeholder="예: 민화붓")
+    with kw_col2:
+        modifier = st.text_input("수식어", value=st.session_state.get('loaded_modifier', ''), placeholder="예: 부드러운")
+        sub_keyword2 = st.text_input("서브 키워드 2", value=st.session_state.get('loaded_sub2', ''), placeholder="예: 동양화")
+
+    parts = []
+    if brand_name.strip(): parts.append(f"[{brand_name.strip()}]")
+    if modifier.strip(): parts.append(modifier.strip())
+    if main_keyword.strip(): parts.append(main_keyword.strip())
+    if sub_keyword1.strip(): parts.append(sub_keyword1.strip())
+    if sub_keyword2.strip(): parts.append(sub_keyword2.strip())
+    
+    product_name = " ".join(parts) if parts else "상품명 미입력"
+    st.info(f"**자동 완성 상품명:** {product_name}")
+    search_keyword = main_keyword.strip() if main_keyword.strip() else product_name
 
 if hero_file is not None or st.session_state.get('loaded_hero_b64'):
     col_btn1, col_btn2 = st.columns([1, 0.01])
@@ -644,9 +671,9 @@ if hero_file is not None or st.session_state.get('loaded_hero_b64'):
                             img = PIL.Image.open(io.BytesIO(base64.b64decode(st.session_state.loaded_hero_b64)))
                         
                         if web_info.strip():
-                            prompt = f"상품 메인 사진과 검색정보야.\n[사용자 핵심 키워드]: {search_keyword}\n[검색 정보]\n{web_info}\n\n사용자가 의도한 핵심 키워드는 '{search_keyword}'야. 위 [검색 정보]가 너무 일반적이더라도, 반드시 '{search_keyword}'가 가진 진짜 의미와 목적을 문맥에 맞게 잘 살려서 내용에 포함시켜 줘!\n구구절절 긴 문장은 절대 피하고, 전체 글자수 50자 이내로 네이버 스마트스토어에 올리기 딱 좋은 간결하고 시선을 끄는 카피라이팅을 2~3줄로 작성해 줘.\n\n그리고 이 상품과 '{search_keyword}'에 관련된 '네이버 스마트스토어' 및 '인스타그램' 마케팅용 추천 해시태그 20개를 작성해줘. 단, 한 줄에 모두 적지 말고 10개씩 2줄로 나누어서 작성해 줘.\n출력 형식은 다음과 같이 구분해줘:\n[카피라이팅]\n(내용)\n[해시태그]\n#태그1 #태그2 ... (10개)\n#태그11 #태그12 ... (10개)"
+                            prompt = f"상품 메인 사진과 검색정보야.\n[검색 정보]\n{web_info}\n\n[필수 포함 키워드]\n- 브랜드명: {brand_name}\n- 수식어: {modifier}\n- 메인키워드: {main_keyword}\n- 서브키워드: {sub_keyword1}, {sub_keyword2}\n\n위 [검색 정보]가 너무 일반적이더라도, 반드시 위 [필수 포함 키워드]들의 진짜 의미와 목적을 문맥에 맞게 잘 살려서 내용에 자연스럽게 녹여 줘!\n구구절절 긴 문장은 절대 피하고, 전체 글자수 50자 이내로 네이버 스마트스토어에 올리기 딱 좋은 간결하고 시선을 끄는 카피라이팅을 2~3줄로 작성해 줘.\n\n그리고 이 상품의 필수 포함 키워드들에 관련된 '네이버 스마트스토어' 및 '인스타그램' 마케팅용 추천 해시태그 20개를 작성해줘. 단, 한 줄에 모두 적지 말고 10개씩 2줄로 나누어서 작성해 줘.\n출력 형식은 다음과 같이 구분해줘:\n[카피라이팅]\n(내용)\n[해시태그]\n#태그1 #태그2 ... (10개)\n#태그11 #태그12 ... (10개)"
                         else:
-                            prompt = f"이 사진의 특징과 디테일을 파악하되, 사용자가 입력한 핵심 키워드인 '{search_keyword}'의 의미와 목적을 문맥에 맞게 잘 살려서 작성해 줘. 구구절절 긴 문장은 절대 피하고 전체 글자수 50자 이내로 네이버 스마트스토어에 올리기 딱 좋은 간결하고 시선을 끄는 카피라이팅을 2~3줄로 작성해 줘.\n\n그리고 이 상품과 '{search_keyword}'에 관련된 '네이버 쇼핑' 및 '인스타그램' 마케팅용 추천 해시태그 20개를 작성해줘. 단, 한 줄에 모두 적지 말고 10개씩 2줄로 나누어서 작성해 줘.\n출력 형식은 다음과 같이 구분해줘:\n[카피라이팅]\n(내용)\n[해시태그]\n#태그1 #태그2 ... (10개)\n#태그11 #태그12 ... (10개)"
+                            prompt = f"이 사진의 특징과 디테일을 파악하되, 아래의 [필수 포함 키워드]들의 의미와 목적을 문맥에 맞게 잘 살려서 카피라이팅에 자연스럽게 녹여 줘.\n\n[필수 포함 키워드]\n- 브랜드명: {brand_name}\n- 수식어: {modifier}\n- 메인키워드: {main_keyword}\n- 서브키워드: {sub_keyword1}, {sub_keyword2}\n\n구구절절 긴 문장은 절대 피하고 전체 글자수 50자 이내로 네이버 스마트스토어에 올리기 딱 좋은 간결하고 시선을 끄는 카피라이팅을 2~3줄로 작성해 줘.\n\n그리고 이 상품의 필수 포함 키워드들에 관련된 '네이버 쇼핑' 및 '인스타그램' 마케팅용 추천 해시태그 20개를 작성해줘. 단, 한 줄에 모두 적지 말고 10개씩 2줄로 나누어서 작성해 줘.\n출력 형식은 다음과 같이 구분해줘:\n[카피라이팅]\n(내용)\n[해시태그]\n#태그1 #태그2 ... (10개)\n#태그11 #태그12 ... (10개)"
                         
                         try:
                             model = genai.GenerativeModel('gemini-2.5-flash')
