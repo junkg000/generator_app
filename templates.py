@@ -18,7 +18,20 @@ def draw_text_with_fallback(draw, xy, text, font, fill, anchor=None):
     except:
         draw.text(xy, text, font=font, fill=fill)
 
-def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_sub_bottom, points, shape_off_x=0, shape_off_y=0, text_off_x=0, text_off_y=0):
+def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_sub_bottom, points, shape_off_x=0, shape_off_y=0, text_off_x=0, text_off_y=0, tmpl_opts=None):
+    if tmpl_opts is None: tmpl_opts = {}
+    t_sz = tmpl_opts.get('title_size', 1.0)
+    t_clr = tmpl_opts.get('title_color', 'white')
+    st_sz = tmpl_opts.get('sub_top_size', 1.0)
+    st_clr = tmpl_opts.get('sub_top_color', '#EEEEEE')
+    sb_sz = tmpl_opts.get('sub_bot_size', 1.0)
+    sb_clr = tmpl_opts.get('sub_bot_color', '#DDDDDD')
+    pt_sz = tmpl_opts.get('p_title_size', 1.0)
+    pt_clr = tmpl_opts.get('p_title_color', 'white')
+    pd_sz = tmpl_opts.get('p_desc_size', 1.0)
+    pd_clr = tmpl_opts.get('p_desc_color', '#DDDDDD')
+    show_icons = tmpl_opts.get('show_icons', True)
+
     W, H = bg.size
     
     shape_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -37,22 +50,22 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         draw_s.rectangle([0, banner_y, W, H], fill=tmpl_color)
         
         f_icon = ImageFont.truetype(font_e, int(banner_h * 0.4))
-        f_p_title = ImageFont.truetype(font_b, int(banner_h * 0.18))
-        f_p_desc = ImageFont.truetype(font_r, int(banner_h * 0.12))
+        f_p_title = ImageFont.truetype(font_b, int(banner_h * 0.18) * pt_sz)
+        f_p_desc = ImageFont.truetype(font_r, int(banner_h * 0.12) * pd_sz)
         
         col_w = W // 3
         for idx, (icon, title, desc) in enumerate(points):
             cx = idx * col_w + (col_w // 2)
             icon_x, text_x = cx - int(col_w * 0.35), cx - int(col_w * 0.15)
-            draw_text_with_fallback(draw_t, (icon_x, banner_y + banner_h*0.5), icon, f_icon, "white", "mm")
-            draw_text_with_fallback(draw_t, (text_x, banner_y + banner_h*0.35), title, f_p_title, "white", "lm")
-            draw_text_with_fallback(draw_t, (text_x, banner_y + banner_h*0.65), desc, f_p_desc, "#DDDDDD", "lm")
+            if show_icons: draw_text_with_fallback(draw_t, (icon_x, banner_y + banner_h*0.5), icon, f_icon, "white", "mm")
+            draw_text_with_fallback(draw_t, (text_x, banner_y + banner_h*0.35), title, f_p_title, pt_clr, "lm")
+            draw_text_with_fallback(draw_t, (text_x, banner_y + banner_h*0.65), desc, f_p_desc, pd_clr, "lm")
             
         title_x, title_y = int(W * 0.08), int(H * 0.15)
-        f_sub = ImageFont.truetype(font_b, int(W * 0.035))
-        f_main = ImageFont.truetype(font_b, int(W * 0.09))
+        f_sub = ImageFont.truetype(font_b, int(W * 0.035) * st_sz)
+        f_main = ImageFont.truetype(font_b, int(W * 0.09) * t_sz)
         
-        draw_text_with_fallback(draw_t, (title_x, title_y), tmpl_sub_top, f_sub, "#222222")
+        draw_text_with_fallback(draw_t, (title_x, title_y), tmpl_sub_top, f_sub, st_clr)
         lines = tmpl_title.split("\n")
         curr_y = title_y + int(H * 0.05)
         for idx, line in enumerate(lines):
@@ -71,28 +84,28 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         overlay = Image.new("RGBA", bg.size, (0,0,0,120))
         bg = Image.alpha_composite(bg, overlay)
         
-        f_main = ImageFont.truetype(font_b, int(W * 0.12))
-        f_sub = ImageFont.truetype(font_b, int(W * 0.04))
+        f_main = ImageFont.truetype(font_b, int(W * 0.12) * t_sz)
+        f_sub = ImageFont.truetype(font_b, int(W * 0.04) * st_sz)
         
         cy = int(H * 0.3)
-        draw_text_with_fallback(draw_t, (W//2, cy), tmpl_sub_top, f_sub, tmpl_color, "mm")
+        draw_text_with_fallback(draw_t, (W//2, cy), tmpl_sub_top, f_sub, st_clr, "mm")
         
         lines = tmpl_title.split("\n")
         cy += int(H * 0.08)
         for line in lines:
-            draw_text_with_fallback(draw_t, (W//2, cy), line, f_main, "white", "mm")
+            draw_text_with_fallback(draw_t, (W//2, cy), line, f_main, t_clr, "mm")
             cy += int(H * 0.13)
             
         cy += int(H * 0.05)
-        draw_text_with_fallback(draw_t, (W//2, cy), tmpl_sub_bottom, f_sub, "#DDDDDD", "mm")
+        draw_text_with_fallback(draw_t, (W//2, cy), tmpl_sub_bottom, f_sub, sb_clr, "mm")
         
         f_icon = ImageFont.truetype(font_e, int(H * 0.06))
-        f_p_title = ImageFont.truetype(font_b, int(H * 0.03))
+        f_p_title = ImageFont.truetype(font_b, int(H * 0.03) * pt_sz)
         col_w = W // 3
         banner_y = H - int(H * 0.15)
         for idx, (icon, title, desc) in enumerate(points):
             cx = idx * col_w + (col_w // 2)
-            draw_text_with_fallback(draw_t, (cx, banner_y), icon, f_icon, "white", "mm")
+            if show_icons: draw_text_with_fallback(draw_t, (cx, banner_y), icon, f_icon, "white", "mm")
             draw_text_with_fallback(draw_t, (cx, banner_y + int(H*0.05)), title, f_p_title, tmpl_color, "mm")
 
     elif style_idx == 2:
@@ -100,27 +113,27 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         ribbon_w = int(W * 0.35)
         draw_s.rectangle([0, 0, ribbon_w, H], fill=tmpl_color)
         
-        f_sub = ImageFont.truetype(font_b, int(ribbon_w * 0.08))
-        f_main = ImageFont.truetype(font_b, int(ribbon_w * 0.18))
+        f_sub = ImageFont.truetype(font_b, int(ribbon_w * 0.08) * st_sz)
+        f_main = ImageFont.truetype(font_b, int(ribbon_w * 0.18) * t_sz)
         
         cx = ribbon_w // 2
         cy = int(H * 0.1)
-        draw_text_with_fallback(draw_t, (cx, cy), tmpl_sub_top, f_sub, "#EEEEEE", "mm")
+        draw_text_with_fallback(draw_t, (cx, cy), tmpl_sub_top, f_sub, st_clr, "mm")
         
         lines = tmpl_title.split("\n")
         cy += int(H * 0.05)
         for line in lines:
-            draw_text_with_fallback(draw_t, (cx, cy), line, f_main, "white", "mt")
+            draw_text_with_fallback(draw_t, (cx, cy), line, f_main, t_clr, "mt")
             cy += int(H * 0.08)
             
         cy += int(H * 0.05)
-        draw_text_with_fallback(draw_t, (cx, cy), tmpl_sub_bottom, f_sub, "#DDDDDD", "mm")
+        draw_text_with_fallback(draw_t, (cx, cy), tmpl_sub_bottom, f_sub, sb_clr, "mm")
         
         cy += int(H * 0.15)
         f_icon = ImageFont.truetype(font_e, int(H * 0.05))
-        f_p_title = ImageFont.truetype(font_b, int(H * 0.025))
+        f_p_title = ImageFont.truetype(font_b, int(H * 0.025) * pt_sz)
         for (icon, title, desc) in points:
-            draw_text_with_fallback(draw_t, (cx, cy), icon, f_icon, "white", "mm")
+            if show_icons: draw_text_with_fallback(draw_t, (cx, cy), icon, f_icon, "white", "mm")
             draw_text_with_fallback(draw_t, (cx, cy + int(H*0.04)), title, f_p_title, "white", "mm")
             cy += int(H * 0.12)
 
@@ -132,19 +145,19 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         draw_s.rectangle([box_x, box_y, box_x+box_w, box_y+box_h], fill=(255,255,255,230))
         draw_s.rectangle([box_x, box_y, box_x+15, box_y+box_h], fill=tmpl_color)
         
-        f_main = ImageFont.truetype(font_b, int(box_w * 0.15))
-        f_sub = ImageFont.truetype(font_r, int(box_w * 0.06))
+        f_main = ImageFont.truetype(font_b, int(box_w * 0.15) * t_sz)
+        f_sub = ImageFont.truetype(font_r, int(box_w * 0.06) * st_sz)
         
         tx, ty = box_x + 30, box_y + 20
         inline_title = tmpl_title.replace("\n", " ")
-        draw_text_with_fallback(draw_t, (tx, ty), inline_title, f_main, "#222222", "lt")
+        draw_text_with_fallback(draw_t, (tx, ty), inline_title, f_main, t_clr, "lt")
         ty += int(box_h * 0.25)
-        draw_text_with_fallback(draw_t, (tx, ty), tmpl_sub_top, f_sub, tmpl_color, "lt")
+        draw_text_with_fallback(draw_t, (tx, ty), tmpl_sub_top, f_sub, st_clr, "lt")
         
         ty += int(box_h * 0.15)
-        f_p_title = ImageFont.truetype(font_b, int(box_w * 0.07))
+        f_p_title = ImageFont.truetype(font_b, int(box_w * 0.07) * pt_sz)
         for (icon, title, desc) in points:
-            draw_text_with_fallback(draw_t, (tx, ty), f"{icon} {title}", f_p_title, "#444444", "lt")
+            draw_text_with_fallback(draw_t, (tx, ty), f"{icon} {title}" if show_icons else title, f_p_title, pt_clr, "lt")
             ty += int(box_h * 0.15)
 
     elif style_idx == 4:
@@ -152,26 +165,26 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         split_x = int(W * 0.4)
         draw_s.rectangle([0, 0, split_x, H], fill=tmpl_color)
         
-        f_sub = ImageFont.truetype(font_b, int(split_x * 0.07))
-        f_main = ImageFont.truetype(font_b, int(split_x * 0.18))
-        f_p_title = ImageFont.truetype(font_b, int(split_x * 0.09))
-        f_p_desc = ImageFont.truetype(font_r, int(split_x * 0.06))
+        f_sub = ImageFont.truetype(font_b, int(split_x * 0.07) * st_sz)
+        f_main = ImageFont.truetype(font_b, int(split_x * 0.18) * t_sz)
+        f_p_title = ImageFont.truetype(font_b, int(split_x * 0.09) * pt_sz)
+        f_p_desc = ImageFont.truetype(font_r, int(split_x * 0.06) * pd_sz)
         
         cx, cy = int(split_x * 0.1), int(H * 0.1)
-        draw_text_with_fallback(draw_t, (cx, cy), tmpl_sub_top, f_sub, "#EEEEEE", "lt")
+        draw_text_with_fallback(draw_t, (cx, cy), tmpl_sub_top, f_sub, st_clr, "lt")
         
         lines = tmpl_title.split("\n")
         cy += int(H * 0.05)
         for line in lines:
-            draw_text_with_fallback(draw_t, (cx, cy), line, f_main, "white", "lt")
+            draw_text_with_fallback(draw_t, (cx, cy), line, f_main, t_clr, "lt")
             cy += int(H * 0.08)
             
         cy += int(H * 0.05)
-        draw_text_with_fallback(draw_t, (cx, cy), tmpl_sub_bottom, f_sub, "#DDDDDD", "lt")
+        draw_text_with_fallback(draw_t, (cx, cy), tmpl_sub_bottom, f_sub, sb_clr, "lt")
         
         cy += int(H * 0.15)
         for (icon, title, desc) in points:
-            draw_text_with_fallback(draw_t, (cx, cy), f"{icon} {title}", f_p_title, "white", "lt")
+            draw_text_with_fallback(draw_t, (cx, cy), f"{icon} {title}" if show_icons else title, f_p_title, pt_clr, "lt")
             draw_text_with_fallback(draw_t, (cx, cy + int(H*0.03)), desc, f_p_desc, "#CCCCCC", "lt")
             cy += int(H * 0.1)
 
@@ -182,8 +195,8 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         col_w = W // 3
         
         f_icon = ImageFont.truetype(font_e, int(card_h * 0.35))
-        f_p_title = ImageFont.truetype(font_b, int(card_h * 0.2))
-        f_p_desc = ImageFont.truetype(font_r, int(card_h * 0.12))
+        f_p_title = ImageFont.truetype(font_b, int(card_h * 0.2) * pt_sz)
+        f_p_desc = ImageFont.truetype(font_r, int(card_h * 0.12) * pd_sz)
         
         for idx, (icon, title, desc) in enumerate(points):
             cx = idx * col_w + (col_w // 2)
@@ -191,15 +204,15 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
             left = cx - card_w//2
             draw_s.rounded_rectangle([left, card_y, left+card_w, card_y+card_h], radius=15, fill="white")
             
-            draw_text_with_fallback(draw_t, (cx, card_y + card_h*0.2), icon, f_icon, "black", "mm")
-            draw_text_with_fallback(draw_t, (cx, card_y + card_h*0.55), title, f_p_title, tmpl_color, "mm")
-            draw_text_with_fallback(draw_t, (cx, card_y + card_h*0.8), desc, f_p_desc, "#555555", "mm")
+            if show_icons: draw_text_with_fallback(draw_t, (cx, card_y + card_h*0.2), icon, f_icon, "black", "mm")
+            draw_text_with_fallback(draw_t, (cx, card_y + card_h*0.55), title, f_p_title, pt_clr, "mm")
+            draw_text_with_fallback(draw_t, (cx, card_y + card_h*0.8), desc, f_p_desc, pd_clr, "mm")
             
-        f_main = ImageFont.truetype(font_b, int(W * 0.1))
-        f_sub = ImageFont.truetype(font_b, int(W * 0.04))
+        f_main = ImageFont.truetype(font_b, int(W * 0.1) * t_sz)
+        f_sub = ImageFont.truetype(font_b, int(W * 0.04) * st_sz)
         
         cy = int(H * 0.1)
-        draw_text_with_fallback(draw_t, (W//2, cy), tmpl_sub_top, f_sub, tmpl_color, "mm")
+        draw_text_with_fallback(draw_t, (W//2, cy), tmpl_sub_top, f_sub, st_clr, "mm")
         inline_title = tmpl_title.replace("\n", " ")
         draw_text_with_fallback(draw_t, (W//2, cy + int(H*0.07)), inline_title, f_main, "#222222", "mm")
 
@@ -211,22 +224,22 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         draw_s.rectangle([0, 0, W, header_h], fill=tmpl_color)
         draw_s.rectangle([0, H - footer_h, W, H], fill="#222222")
         
-        f_main = ImageFont.truetype(font_b, int(header_h * 0.4))
-        f_sub = ImageFont.truetype(font_r, int(header_h * 0.2))
+        f_main = ImageFont.truetype(font_b, int(header_h * 0.4) * t_sz)
+        f_sub = ImageFont.truetype(font_r, int(header_h * 0.2) * st_sz)
         
         inline_title = tmpl_title.replace("\n", " ")
-        draw_text_with_fallback(draw_t, (W//2, header_h*0.4), inline_title, f_main, "white", "mm")
-        draw_text_with_fallback(draw_t, (W//2, header_h*0.8), tmpl_sub_top, f_sub, "#DDDDDD", "mm")
+        draw_text_with_fallback(draw_t, (W//2, header_h*0.4), inline_title, f_main, t_clr, "mm")
+        draw_text_with_fallback(draw_t, (W//2, header_h*0.8), tmpl_sub_top, f_sub, st_clr, "mm")
         
         f_icon = ImageFont.truetype(font_e, int(footer_h * 0.4))
-        f_p_title = ImageFont.truetype(font_b, int(footer_h * 0.25))
+        f_p_title = ImageFont.truetype(font_b, int(footer_h * 0.25) * pt_sz)
         
         col_w = W // 3
         footer_y = H - footer_h
         for idx, (icon, title, desc) in enumerate(points):
             cx = idx * col_w + (col_w // 2)
-            draw_text_with_fallback(draw_t, (cx, footer_y + footer_h*0.3), icon, f_icon, "white", "mm")
-            draw_text_with_fallback(draw_t, (cx, footer_y + footer_h*0.7), title, f_p_title, tmpl_color, "mm")
+            if show_icons: draw_text_with_fallback(draw_t, (cx, footer_y + footer_h*0.3), icon, f_icon, "white", "mm")
+            draw_text_with_fallback(draw_t, (cx, footer_y + footer_h*0.7), title, f_p_title, pt_clr, "mm")
 
     elif style_idx == 7:
         # 8. 풀 오버레이 그라데이션
@@ -236,22 +249,22 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
             alpha = int((i / grad_h) * 220)
             draw_s.line([(0, grad_y + i), (W, grad_y + i)], fill=(0, 0, 0, alpha))
             
-        f_main = ImageFont.truetype(font_b, int(W * 0.1))
-        f_sub = ImageFont.truetype(font_r, int(W * 0.04))
+        f_main = ImageFont.truetype(font_b, int(W * 0.1) * t_sz)
+        f_sub = ImageFont.truetype(font_r, int(W * 0.04) * st_sz)
         
         cy = grad_y + int(grad_h * 0.2)
-        draw_text_with_fallback(draw_t, (W//2, cy), tmpl_sub_top, f_sub, tmpl_color, "mm")
+        draw_text_with_fallback(draw_t, (W//2, cy), tmpl_sub_top, f_sub, st_clr, "mm")
         
         inline_title = tmpl_title.replace("\n", " ")
         cy += int(grad_h * 0.2)
-        draw_text_with_fallback(draw_t, (W//2, cy), inline_title, f_main, "white", "mm")
+        draw_text_with_fallback(draw_t, (W//2, cy), inline_title, f_main, t_clr, "mm")
         
         cy += int(grad_h * 0.3)
         col_w = W // 3
-        f_p_title = ImageFont.truetype(font_b, int(grad_h * 0.08))
+        f_p_title = ImageFont.truetype(font_b, int(grad_h * 0.08) * pt_sz)
         for idx, (icon, title, desc) in enumerate(points):
             cx = idx * col_w + (col_w // 2)
-            draw_text_with_fallback(draw_t, (cx, cy), f"{icon} {title}", f_p_title, "white", "mm")
+            draw_text_with_fallback(draw_t, (cx, cy), f"{icon} {title}" if show_icons else title, f_p_title, pt_clr, "mm")
 
     elif style_idx == 8:
         # 9. 대각선 스포트라이트
@@ -260,21 +273,21 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         title_x = int(W * 0.05)
         title_y = int(H * 0.1)
         
-        f_sub = ImageFont.truetype(font_b, int(W * 0.035))
-        f_main = ImageFont.truetype(font_b, int(W * 0.09))
+        f_sub = ImageFont.truetype(font_b, int(W * 0.035) * st_sz)
+        f_main = ImageFont.truetype(font_b, int(W * 0.09) * t_sz)
         
-        draw_text_with_fallback(draw_t, (title_x, title_y), tmpl_sub_top, f_sub, "#222222", "lt")
+        draw_text_with_fallback(draw_t, (title_x, title_y), tmpl_sub_top, f_sub, st_clr, "lt")
         lines = tmpl_title.split("\n")
         curr_y = title_y + int(H * 0.05)
         for line in lines:
-            draw_text_with_fallback(draw_t, (title_x, curr_y), line, f_main, "white", "lt")
+            draw_text_with_fallback(draw_t, (title_x, curr_y), line, f_main, t_clr, "lt")
             curr_y += int(H * 0.1)
             
         curr_y += int(H * 0.1)
-        f_p_title = ImageFont.truetype(font_b, int(W * 0.04))
-        f_p_desc = ImageFont.truetype(font_r, int(W * 0.03))
+        f_p_title = ImageFont.truetype(font_b, int(W * 0.04) * pt_sz)
+        f_p_desc = ImageFont.truetype(font_r, int(W * 0.03) * pd_sz)
         for (icon, title, desc) in points:
-            draw_text_with_fallback(draw_t, (title_x, curr_y), f"{icon} {title}", f_p_title, "#222222", "lt")
+            draw_text_with_fallback(draw_t, (title_x, curr_y), f"{icon} {title}" if show_icons else title, f_p_title, pt_clr, "lt")
             draw_text_with_fallback(draw_t, (title_x, curr_y + int(H*0.04)), desc, f_p_desc, "white", "lt")
             curr_y += int(H * 0.1)
 
@@ -285,8 +298,8 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         draw_s.ellipse([bx, by, bx+badge_r*2, by+badge_r*2], fill=tmpl_color)
         draw_s.ellipse([bx+10, by+10, bx+badge_r*2-10, by+badge_r*2-10], outline="white", width=3)
         
-        f_main = ImageFont.truetype(font_b, int(badge_r * 0.35))
-        f_sub = ImageFont.truetype(font_b, int(badge_r * 0.15))
+        f_main = ImageFont.truetype(font_b, int(badge_r * 0.35) * t_sz)
+        f_sub = ImageFont.truetype(font_b, int(badge_r * 0.15) * st_sz)
         
         cx, cy = bx + badge_r, by + badge_r
         inline_title = tmpl_title.replace("\n", " ")
@@ -298,11 +311,11 @@ def render_template(bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_su
         banner_y = H - banner_h
         draw_s.rectangle([0, banner_y, W, H], fill=(255,255,255,230))
         
-        f_p_title = ImageFont.truetype(font_b, int(banner_h * 0.3))
+        f_p_title = ImageFont.truetype(font_b, int(banner_h * 0.3) * pt_sz)
         col_w = W // 3
         for idx, (icon, title, desc) in enumerate(points):
             ccx = idx * col_w + (col_w // 2)
-            draw_text_with_fallback(draw_t, (ccx, banner_y + banner_h*0.5), f"{icon} {title}", f_p_title, tmpl_color, "mm")
+            draw_text_with_fallback(draw_t, (ccx, banner_y + banner_h*0.5), f"{icon} {title}" if show_icons else title, f_p_title, pt_clr, "mm")
 
     bg.paste(shape_layer, (shape_off_x, shape_off_y), mask=shape_layer)
     bg.paste(text_layer, (text_off_x, text_off_y), mask=text_layer)

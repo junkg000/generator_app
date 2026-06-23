@@ -339,9 +339,9 @@ def render_editor(target_id="hero"):
                     else:
                         font_weight = st.selectbox("굵기", ["보통", "굵게"], key=f'edit_weight_{target_id}')
                         
-                text_size = st.slider("글씨 크기", 10, 300, 80, 5, key=f'edit_text_size_{target_id}')
-                text_x = st.slider("글씨 가로 위치 (좌우 이동)", -1000, 1000, 0, 10, key=f'edit_text_x_{target_id}')
-                text_y = st.slider("글씨 세로 위치 (상하 이동)", 0, 1500, 100, 10, key=f'edit_text_y_{target_id}')
+                text_size = synced_slider("글씨 크기", 10, 300, 80, 5, f'edit_text_size_{target_id}')
+                text_x = synced_slider("글씨 가로 위치 (좌우 이동)", -1000, 1000, 0, 10, f'edit_text_x_{target_id}')
+                text_y = synced_slider("글씨 세로 위치 (상하 이동)", 0, 1500, 100, 10, f'edit_text_y_{target_id}')
                 text_color = st.color_picker("글씨 색상", "#FFFFFF", key=f'edit_color_{target_id}')
                 
             with tab4:
@@ -357,23 +357,44 @@ def render_editor(target_id="hero"):
                 
                 tmpl_color = st.color_picker("배너/포인트 색상", "#4A533E", key=f"tmpl_color_{target_id}")
                 tmpl_title = st.text_area("메인 타이틀", "프리미엄\n소나무붓\n4종 세트", key=f"tmpl_title_{target_id}")
+                col_t1, col_t2 = st.columns([2, 1])
+                with col_t1: tmpl_title_size = synced_slider("타이틀 크기(%)", 50, 300, 100, 5, f"tmpl_title_size_{target_id}")
+                with col_t2: tmpl_title_color = st.color_picker("타이틀 색상", "#FFFFFF", key=f"tmpl_title_color_{target_id}")
+                
                 tmpl_sub_top = st.text_input("상단 서브 타이틀", "한 붓의 차이가 작품의 품격을 만듭니다.", key=f"tmpl_sub_top_{target_id}")
+                col_st1, col_st2 = st.columns([2, 1])
+                with col_st1: tmpl_sub_top_size = synced_slider("상단 서브 크기(%)", 50, 300, 100, 5, f"tmpl_sub_top_size_{target_id}")
+                with col_st2: tmpl_sub_top_color = st.color_picker("상단 서브 색상", "#FFFFFF", key=f"tmpl_sub_top_color_{target_id}")
+                
                 tmpl_sub_bottom = st.text_input("하단 서브 타이틀", "전통의 깊이, 완성의 차이", key=f"tmpl_sub_bottom_{target_id}")
+                col_sb1, col_sb2 = st.columns([2, 1])
+                with col_sb1: tmpl_sub_bottom_size = synced_slider("하단 서브 크기(%)", 50, 300, 100, 5, f"tmpl_sub_bottom_size_{target_id}")
+                with col_sb2: tmpl_sub_bottom_color = st.color_picker("하단 서브 색상", "#FFFFFF", key=f"tmpl_sub_bottom_color_{target_id}")
+                
+                st.markdown("---")
+                st.markdown("**포인트 텍스트 설정**")
+                tmpl_show_icons = st.toggle("포인트 아이콘 표시", value=True, key=f"tmpl_show_icons_{target_id}")
+                col_pt1, col_pt2 = st.columns([2, 1])
+                with col_pt1: tmpl_p_title_size = synced_slider("포인트 제목 크기(%)", 50, 300, 100, 5, f"tmpl_p_title_size_{target_id}")
+                with col_pt2: tmpl_p_title_color = st.color_picker("포인트 제목 색상", "#FFFFFF", key=f"tmpl_p_title_color_{target_id}")
+                col_pd1, col_pd2 = st.columns([2, 1])
+                with col_pd1: tmpl_p_desc_size = synced_slider("포인트 설명 크기(%)", 50, 300, 100, 5, f"tmpl_p_desc_size_{target_id}")
+                with col_pd2: tmpl_p_desc_color = st.color_picker("포인트 설명 색상", "#DDDDDD", key=f"tmpl_p_desc_color_{target_id}")
                 
                 st.markdown("---")
                 if st.button("🔄 위치 0으로 모두 초기화", key=f"reset_tmpl_pos_{target_id}"):
-                    st.session_state[f"tmpl_shape_off_x_{target_id}"] = 0
-                    st.session_state[f"tmpl_text_off_x_{target_id}"] = 0
-                    st.session_state[f"tmpl_shape_off_y_{target_id}"] = 0
-                    st.session_state[f"tmpl_text_off_y_{target_id}"] = 0
+                    st.session_state[f"tmpl_shape_off_x_{target_id}_val"] = 0
+                    st.session_state[f"tmpl_text_off_x_{target_id}_val"] = 0
+                    st.session_state[f"tmpl_shape_off_y_{target_id}_val"] = 0
+                    st.session_state[f"tmpl_text_off_y_{target_id}_val"] = 0
 
                 col_off1, col_off2 = st.columns(2)
                 with col_off1:
-                    tmpl_shape_off_x = st.slider("도형 가로 이동 (좌우)", -1000, 1000, 0, 10, key=f"tmpl_shape_off_x_{target_id}")
-                    tmpl_text_off_x = st.slider("글씨 가로 이동 (좌우)", -1000, 1000, 0, 10, key=f"tmpl_text_off_x_{target_id}")
+                    tmpl_shape_off_x = synced_slider("도형 가로 이동 (좌우)", -1000, 1000, 0, 10, f"tmpl_shape_off_x_{target_id}")
+                    tmpl_text_off_x = synced_slider("글씨 가로 이동 (좌우)", -1000, 1000, 0, 10, f"tmpl_text_off_x_{target_id}")
                 with col_off2:
-                    tmpl_shape_off_y = st.slider("도형 세로 이동 (상하)", -1000, 1000, 0, 10, key=f"tmpl_shape_off_y_{target_id}")
-                    tmpl_text_off_y = st.slider("글씨 세로 이동 (상하)", -1000, 1000, 0, 10, key=f"tmpl_text_off_y_{target_id}")
+                    tmpl_shape_off_y = synced_slider("도형 세로 이동 (상하)", -1000, 1000, 0, 10, f"tmpl_shape_off_y_{target_id}")
+                    tmpl_text_off_y = synced_slider("글씨 세로 이동 (상하)", -1000, 1000, 0, 10, f"tmpl_text_off_y_{target_id}")
                     
                 st.markdown("---")
                 col_t1, col_t2, col_t3 = st.columns(3)
@@ -495,9 +516,17 @@ def render_editor(target_id="hero"):
                     (tmpl_p3_icon, tmpl_p3_title, tmpl_p3_desc)
                 ]
                 style_idx = tmpl_styles.index(selected_tmpl)
+                tmpl_opts = {
+                    "title_size": tmpl_title_size / 100.0, "title_color": tmpl_title_color,
+                    "sub_top_size": tmpl_sub_top_size / 100.0, "sub_top_color": tmpl_sub_top_color,
+                    "sub_bot_size": tmpl_sub_bottom_size / 100.0, "sub_bot_color": tmpl_sub_bottom_color,
+                    "p_title_size": tmpl_p_title_size / 100.0, "p_title_color": tmpl_p_title_color,
+                    "p_desc_size": tmpl_p_desc_size / 100.0, "p_desc_color": tmpl_p_desc_color,
+                    "show_icons": tmpl_show_icons
+                }
                 bg = templates.render_template(
                     bg, style_idx, tmpl_color, tmpl_title, tmpl_sub_top, tmpl_sub_bottom, points,
-                    tmpl_shape_off_x, tmpl_shape_off_y, tmpl_text_off_x, tmpl_text_off_y
+                    tmpl_shape_off_x, tmpl_shape_off_y, tmpl_text_off_x, tmpl_text_off_y, tmpl_opts
                 )
                 draw = ImageDraw.Draw(bg)
                 
