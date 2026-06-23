@@ -51,7 +51,7 @@ def generate_replicate_bg(prompt, fg_img, replicate_key):
         client = replicate.Client(api_token=replicate_key)
         
         output = client.run(
-            "stability-ai/stable-diffusion-inpainting:95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd58bf",
+            "stability-ai/stable-diffusion-inpainting:95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3",
             input={
                 "prompt": prompt,
                 "image": base_bytes,
@@ -420,6 +420,7 @@ def render_editor(target_id="hero"):
                 offset_x = synced_slider("가로 위치 (X)", -1000, 1000, 0, 10, f'edit_x_{target_id}')
                 offset_y = synced_slider("세로 위치 (Y)", -1000, 1000, 0, 10, f'edit_y_{target_id}')
                 fill_blur_bg = st.toggle("✨ 빈 공간을 원본 사진 블러로 채우기", value=False, key=f'edit_fill_blur_{target_id}')
+                overlay_fg = st.toggle("✨ 원본 피사체 덮어쓰기 (Replicate 착용샷 시 끄기)", value=True, key=f'edit_overlay_{target_id}', help="AI 합성 손이나 객체를 가리지 않으려면 끄세요.")
                 erode_size = synced_slider("테두리 색번짐 제거 (픽셀 깎기)", 0, 10, 0, 1, f'edit_erode_{target_id}')
                 
                 st.markdown("---")
@@ -721,7 +722,8 @@ def render_editor(target_id="hero"):
             temp_layer = PIL.Image.new("RGBA", bg.size, (0, 0, 0, 0))
             if shadow_intensity > 0:
                 temp_layer.paste(shadow, (cx, shadow_y), mask=shadow)
-            temp_layer.paste(fg, (cx, cy), mask=fg)
+            if overlay_fg:
+                temp_layer.paste(fg, (cx, cy), mask=fg)
             
             bg = PIL.Image.alpha_composite(bg, temp_layer)
             draw = ImageDraw.Draw(bg)
