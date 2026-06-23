@@ -8,6 +8,43 @@ import PIL.Image
 from duckduckgo_search import DDGS
 import google.generativeai as genai
 
+
+def generate_contextual_prompts(fg_img, api_key):
+    import google.generativeai as genai
+    import json
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
+        prompt = '''
+You are a professional product photography art director. Analyze the provided image (which is a subject with its background removed).
+Provide exactly 4 high-quality image generation prompts to create a background that perfectly matches this subject.
+The prompts must be in English and optimized for an image generation model (like Imagen or Midjourney).
+Requirements for the 4 backgrounds:
+1. "studio_1": A premium studio setting that perfectly matches the subject's material and vibe (e.g., marble for cosmetics, wood for food).
+2. "studio_2": Another studio setting with a different mood (e.g., dark dramatic lighting, or bright pastel).
+3. "lifestyle": A realistic lifestyle setting where this object would naturally be placed or used (e.g., a cozy living room table, a sunny window sill, a person's hand holding it).
+4. "creative": A highly creative, cinematic, or thematic background (e.g., surrounded by nature, floating on water, cyberpunk, etc.).
+Important: The background must be completely empty in the center where the subject will be placed. End each prompt with "completely empty in the center, perfect for product placement, no text, 8k resolution".
+Return ONLY a valid JSON object with the keys "studio_1", "studio_2", "lifestyle", "creative", and the prompt strings as values.
+'''
+        res = model.generate_content([prompt, fg_img])
+        data = json.loads(res.text)
+        return [
+            data.get("studio_1", "A high-end minimalist studio background, soft lighting, completely empty in the center, 8k resolution"),
+            data.get("studio_2", "A bright and airy studio background, marble surface, completely empty in the center, 8k resolution"),
+            data.get("lifestyle", "A realistic lifestyle setting, natural lighting, out of focus, completely empty in the center, 8k resolution"),
+            data.get("creative", "A cinematic thematic background, creative lighting, completely empty in the center, 8k resolution")
+        ]
+    except Exception as e:
+        print("Prompt generation failed:", e)
+        # Fallback to hardcoded prompts
+        return [
+            "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text.",
+            "A bright and airy minimalist studio background with soft natural morning light and gentle shadows, pure white marble surface, 8k resolution, completely empty, no text.",
+            "A luxurious warm gold and beige studio background, soft bokeh, high-end product photography style, completely empty, 8k resolution, no text.",
+            "A modern abstract geometric background in pastel tones, soft lighting, 3d render style, completely empty, perfect for product placement, no text."
+        ]
+
 def global_create_fallback_bg(theme_idx, size):
     import PIL.Image
     from PIL import ImageDraw
@@ -368,12 +405,8 @@ def render_editor(target_id="hero"):
                                     import concurrent.futures
                                     genai.configure(api_key=saved_key)
                                     model = genai.GenerativeModel('models/gemini-2.5-flash-image')
-                                    bg_prompts = [
-                                        "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text.",
-                                        "A bright and airy minimalist studio background with soft natural morning light and gentle shadows, pure white marble surface, 8k resolution, completely empty, no text.",
-                                        "A luxurious warm gold and beige studio background, soft bokeh, high-end product photography style, completely empty, 8k resolution, no text.",
-                                        "A modern abstract geometric background in pastel tones, soft lighting, 3d render style, completely empty, perfect for product placement, no text."
-                                    ]
+                                    fg_for_prompt = st.session_state[f'{target_id}_fg_img']
+                                    bg_prompts = generate_contextual_prompts(fg_for_prompt, saved_key)
                                     generated_bgs = []
                                     def generate_single_bg(prompt):
                                         try:
