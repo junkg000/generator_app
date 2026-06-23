@@ -675,7 +675,8 @@ with col2:
     if sub_keyword2.strip(): parts.append(sub_keyword2.strip())
     
     product_name = " ".join(parts) if parts else "상품명 미입력"
-    st.info(f"**자동 완성 상품명:** {product_name}")
+    st.markdown("**📋 자동 완성 상품명 (우측 상단 복사 버튼 클릭)**")
+    st.code(product_name, language="text")
     search_keyword = main_keyword.strip() if main_keyword.strip() else product_name
 
 if hero_file is not None or st.session_state.get('loaded_hero_b64'):
