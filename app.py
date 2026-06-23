@@ -9,6 +9,68 @@ from duckduckgo_search import DDGS
 import google.generativeai as genai
 
 
+
+def prepare_inpaint_inputs(fg_img):
+    import PIL.Image
+    import io
+    import numpy as np
+    
+    bg_size = max(fg_img.size)
+    bg_size = (bg_size, bg_size) # Make it square for better stable diffusion results
+    
+    # Base image: Transparent bg replaced with white
+    base_img = PIL.Image.new("RGB", bg_size, (255, 255, 255))
+    offset = ((bg_size[0] - fg_img.size[0]) // 2, (bg_size[1] - fg_img.size[1]) // 2)
+    base_img.paste(fg_img, offset, fg_img)
+    
+    # Mask image: white for background (inpaint), black for foreground (keep)
+    fg_padded = PIL.Image.new("RGBA", bg_size, (0, 0, 0, 0))
+    fg_padded.paste(fg_img, offset, fg_img)
+    alpha = np.array(fg_padded.split()[-1])
+    mask_np = np.where(alpha > 0, 0, 255).astype(np.uint8)
+    mask_img = PIL.Image.fromarray(mask_np, mode="L")
+    
+    base_bytes = io.BytesIO()
+    base_img.save(base_bytes, format="PNG")
+    base_bytes.seek(0)
+    
+    mask_bytes = io.BytesIO()
+    mask_img.save(mask_bytes, format="PNG")
+    mask_bytes.seek(0)
+    
+    return base_bytes, mask_bytes, offset
+
+def generate_replicate_bg(prompt, fg_img, replicate_key):
+    import replicate
+    import io
+    import PIL.Image
+    
+    try:
+        base_bytes, mask_bytes, offset = prepare_inpaint_inputs(fg_img)
+        
+        client = replicate.Client(api_token=replicate_key)
+        
+        output = client.run(
+            "stability-ai/stable-diffusion-inpainting:95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd58bf",
+            input={
+                "prompt": prompt,
+                "image": base_bytes,
+                "mask": mask_bytes,
+                "num_outputs": 1,
+                "num_inference_steps": 25,
+                "guidance_scale": 7.5
+            }
+        )
+        
+        if output and len(output) > 0:
+            import requests
+            img_data = requests.get(output[0]).content
+            return img_data
+        return None
+    except Exception as e:
+        print("Replicate Error:", e)
+        return None
+
 def generate_contextual_prompts(fg_img, api_key):
     import google.generativeai as genai
     import json
@@ -398,7 +460,7 @@ def render_editor(target_id="hero"):
                         if not saved_key:
                             st.warning("사이드바에 Gemini API 키를 먼저 입력해주세요.")
                         else:
-                            with st.spinner("최고급 AI 스튜디오 배경 4종을 생성 중입니다... (약 10초)"):
+                            with st.spinner("Stable Diffusion 인페인팅으로 완벽한 착용샷/배경을 합성 중입니다... (약 15~20초 소요)"):
                                 try:
                                     import google.generativeai as genai
                                     import io
@@ -409,11 +471,22 @@ def render_editor(target_id="hero"):
                                     bg_prompts = generate_contextual_prompts(fg_for_prompt, saved_key)
                                     generated_bgs = []
                                     def generate_single_bg(prompt):
-                                        try:
-                                            res = model.generate_content(prompt)
-                                            return res.candidates[0].content.parts[0].inline_data.data
-                                        except Exception:
-                                            return None
+                                        import os
+                                        rep_key = ""
+                                        if os.path.exists("replicate_key.txt"):
+                                            with open("replicate_key.txt", "r", encoding="utf-8") as f:
+                                                rep_key = f.read().strip()
+                                        
+                                        if rep_key:
+                                            return generate_replicate_bg(prompt, fg_for_prompt, rep_key)
+                                        else:
+                                            # Fallback to gemini if no replicate key
+                                            try:
+                                                res = model.generate_content(prompt)
+                                                return res.candidates[0].content.parts[0].inline_data.data
+                                            except Exception:
+                                                return None
+                                                
                                     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
                                         results = list(executor.map(generate_single_bg, bg_prompts))
                                     for b_data in results:
@@ -1073,11 +1146,20 @@ for i in range(5):
                                     generated_bgs = []
                                     import concurrent.futures
                                     def generate_single_bg(prompt):
-                                        try:
-                                            res = model.generate_content(prompt)
-                                            return res.candidates[0].content.parts[0].inline_data.data
-                                        except Exception:
-                                            return None
+                                        import os
+                                        rep_key = ""
+                                        if os.path.exists("replicate_key.txt"):
+                                            with open("replicate_key.txt", "r", encoding="utf-8") as f:
+                                                rep_key = f.read().strip()
+                                                
+                                        if rep_key:
+                                            return generate_replicate_bg(prompt, fg_img, rep_key)
+                                        else:
+                                            try:
+                                                res = model.generate_content(prompt)
+                                                return res.candidates[0].content.parts[0].inline_data.data
+                                            except Exception:
+                                                return None
                                             
                                     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
                                         results = executor.map(generate_single_bg, bg_prompts)
