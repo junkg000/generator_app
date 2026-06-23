@@ -40,6 +40,31 @@ def prepare_inpaint_inputs(fg_img):
     
     return base_bytes, mask_bytes, offset
 
+def generate_photoroom_bg(prompt, fg_img, api_key):
+    import requests
+    import io
+    
+    try:
+        url = 'https://image-api.photoroom.com/v2/edit'
+        headers = {'x-api-key': api_key.strip(), 'pr-ai-background-model-version': 'background-studio-beta-2025-03-17'}
+        
+        img_bytes = io.BytesIO()
+        fg_img.save(img_bytes, format='PNG')
+        img_bytes.seek(0)
+        
+        files = {'image_file': img_bytes}
+        data = {'background.prompt': prompt}
+        
+        res = requests.post(url, headers=headers, files=files, data=data)
+        if res.status_code == 200:
+            return res.content
+        else:
+            print(f"Photoroom BG Error: {res.status_code} - {res.text}")
+            return {"error": f"{res.status_code} - {res.text}"}
+    except Exception as e:
+        print("Photoroom BG Exception:", e)
+        return {"error": str(e)}
+
 def generate_replicate_bg(prompt, fg_img, replicate_key):
     import replicate
     import io
@@ -368,7 +393,17 @@ with col_rk2:
         st.sidebar.success("삭제 완료!")
 
 st.sidebar.markdown("---")
-st.sidebar.header("📁 보관함 (저장된 제품)")
+st.sidebar.markdown("⚙️ **AI 배경 합성 엔진 설정**")
+ai_engine = st.sidebar.radio(
+    "메인 배경 합성 엔진 선택",
+    options=["Photoroom API", "Replicate API", "Gemini (무료)"],
+    index=0,
+    help="Photoroom: 상업용 쇼핑몰 특화 (추천)\nReplicate: 자유도 높은 인페인팅\nGemini: 무료 대체 엔진"
+)
+st.session_state.ai_engine = ai_engine
+
+st.sidebar.markdown("---")
+st.sidebar.header("📂 내 작업 (자동 저장)")
 saved_folders = sorted(os.listdir(SAVE_DIR), reverse=True) if os.path.exists(SAVE_DIR) else []
 if not saved_folders:
     st.sidebar.info("저장된 제품이 없습니다.")
@@ -525,19 +560,30 @@ def render_editor(target_id="hero"):
                                     generated_bgs = []
                                     def generate_single_bg(prompt):
                                         import os
-                                        rep_key = ""
-                                        if os.path.exists("replicate_key.txt"):
-                                            with open("replicate_key.txt", "r", encoding="utf-8") as f:
-                                                rep_key = f.read().strip()
-                                        
+                                        engine = st.session_state.get('ai_engine', 'Photoroom API')
                                         img_data = None
-                                        if rep_key:
-                                            img_data = generate_replicate_bg(prompt, fg_for_prompt, rep_key)
-                                            
-                                        if img_data is None or isinstance(img_data, dict):
-                                            if isinstance(img_data, dict):
-                                                st.session_state[f'{target_id}_replicate_error'] = img_data.get("error", "Unknown error")
-                                            # Fallback to gemini if no replicate key or if replicate failed
+                                        
+                                        if engine == "Photoroom API" or engine.startswith("Photoroom"):
+                                            pr_key = ""
+                                            if os.path.exists("photoroom_key.txt"):
+                                                with open("photoroom_key.txt", "r", encoding="utf-8") as f: pr_key = f.read().strip()
+                                            if pr_key:
+                                                img_data = generate_photoroom_bg(prompt, fg_for_prompt, pr_key)
+                                                if img_data and isinstance(img_data, dict):
+                                                    st.session_state[f'{target_id}_replicate_error'] = img_data.get("error", "Unknown error")
+                                                    img_data = None
+                                        
+                                        if (img_data is None) and (engine == "Replicate API" or engine.startswith("Replicate") or engine.startswith("Photoroom")):
+                                            rep_key = ""
+                                            if os.path.exists("replicate_key.txt"):
+                                                with open("replicate_key.txt", "r", encoding="utf-8") as f: rep_key = f.read().strip()
+                                            if rep_key:
+                                                img_data = generate_replicate_bg(prompt, fg_for_prompt, rep_key)
+                                                if img_data and isinstance(img_data, dict):
+                                                    st.session_state[f'{target_id}_replicate_error'] = img_data.get("error", "Unknown error")
+                                                    img_data = None
+                                                    
+                                        if img_data is None:
                                             try:
                                                 res = model.generate_content(prompt)
                                                 img_data = res.candidates[0].content.parts[0].inline_data.data
@@ -1212,18 +1258,30 @@ for i in range(5):
                                     import concurrent.futures
                                     def generate_single_bg(prompt):
                                         import os
-                                        rep_key = ""
-                                        if os.path.exists("replicate_key.txt"):
-                                            with open("replicate_key.txt", "r", encoding="utf-8") as f:
-                                                rep_key = f.read().strip()
-                                                
+                                        engine = st.session_state.get('ai_engine', 'Photoroom API')
                                         img_data = None
-                                        if rep_key:
-                                            img_data = generate_replicate_bg(prompt, fg_img, rep_key)
-                                            
-                                        if img_data is None or isinstance(img_data, dict):
-                                            if isinstance(img_data, dict):
-                                                st.session_state['story_replicate_error'] = img_data.get("error", "Unknown error")
+                                        
+                                        if engine == "Photoroom API" or engine.startswith("Photoroom"):
+                                            pr_key = ""
+                                            if os.path.exists("photoroom_key.txt"):
+                                                with open("photoroom_key.txt", "r", encoding="utf-8") as f: pr_key = f.read().strip()
+                                            if pr_key:
+                                                img_data = generate_photoroom_bg(prompt, fg_img, pr_key)
+                                                if img_data and isinstance(img_data, dict):
+                                                    st.session_state['story_replicate_error'] = img_data.get("error", "Unknown error")
+                                                    img_data = None
+                                        
+                                        if (img_data is None) and (engine == "Replicate API" or engine.startswith("Replicate") or engine.startswith("Photoroom")):
+                                            rep_key = ""
+                                            if os.path.exists("replicate_key.txt"):
+                                                with open("replicate_key.txt", "r", encoding="utf-8") as f: rep_key = f.read().strip()
+                                            if rep_key:
+                                                img_data = generate_replicate_bg(prompt, fg_img, rep_key)
+                                                if img_data and isinstance(img_data, dict):
+                                                    st.session_state['story_replicate_error'] = img_data.get("error", "Unknown error")
+                                                    img_data = None
+                                                    
+                                        if img_data is None:
                                             try:
                                                 res = model.generate_content(prompt)
                                                 img_data = res.candidates[0].content.parts[0].inline_data.data
