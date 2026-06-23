@@ -8,6 +8,35 @@ import PIL.Image
 from duckduckgo_search import DDGS
 import google.generativeai as genai
 
+def global_create_fallback_bg(theme_idx, size):
+    import PIL.Image
+    from PIL import ImageDraw
+    bg = PIL.Image.new("RGBA", size, (255, 255, 255, 255))
+    draw = ImageDraw.Draw(bg)
+    if theme_idx == 0:
+        for y in range(size[1]):
+            ratio = y / size[1]
+            r, g, b = int(58 - 45 * ratio), int(62 - 48 * ratio), int(71 - 54 * ratio)
+            draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+    elif theme_idx == 1:
+        for y in range(size[1]):
+            ratio = y / size[1]
+            r, g, b = int(255 - 20 * ratio), int(255 - 20 * ratio), int(255 - 15 * ratio)
+            draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+    elif theme_idx == 2:
+        for y in range(size[1]):
+            ratio = y / size[1]
+            r, g, b = int(212 - 50 * ratio), int(175 - 40 * ratio), int(55 - 10 * ratio)
+            draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+    else:
+        for y in range(size[1]):
+            ratio = y / size[1]
+            r, g, b = int(245 - 20 * ratio), int(240 - 20 * ratio), int(250 - 20 * ratio)
+            draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+    return bg
+
+
+
 st.set_page_config(page_title="프리미엄 상세페이지 생성기", layout="wide")
 
 @st.cache_resource
@@ -309,7 +338,7 @@ def render_editor(target_id="hero"):
                         # 렌더링 캐시 초기화
                         st.session_state.pop(f'{target_id}_last_fg_params', None)
             with tab2:
-                bg_type = st.radio("배경 설정 방식", ["기존 AI 배경 유지", "단색 배경 적용", "직접 이미지 업로드"], horizontal=True, key=f"edit_bg_type_{target_id}")
+                bg_type = st.radio("배경 설정 방식", ["AI 배경 변경", "단색 배경 적용", "직접 이미지 업로드"], horizontal=True, key=f"edit_bg_type_{target_id}")
                 
                 bg_upload = None
                 use_solid_bg = False
@@ -322,6 +351,56 @@ def render_editor(target_id="hero"):
                     bg_color = st.color_picker("단색 배경 색상 선택", "#000000", key=f'edit_bg_color_{target_id}')
                 else:
                     bg_color = "#000000"
+                    
+                    if st.button("✨ AI 배경 새로 생성하기", key=f"edit_gen_ai_{target_id}"):
+                        saved_key = ""
+                        import os
+                        if os.path.exists("api_key.txt"):
+                            with open("api_key.txt", "r") as f:
+                                saved_key = f.read().strip()
+                        if not saved_key:
+                            st.warning("사이드바에 Gemini API 키를 먼저 입력해주세요.")
+                        else:
+                            with st.spinner("최고급 AI 스튜디오 배경 4종을 생성 중입니다... (약 10초)"):
+                                try:
+                                    import google.generativeai as genai
+                                    import io
+                                    import concurrent.futures
+                                    genai.configure(api_key=saved_key)
+                                    model = genai.GenerativeModel('models/gemini-2.5-flash-image')
+                                    bg_prompts = [
+                                        "A very elegant minimalist dark studio background for product photography, dramatic soft spotlight in the center, 8k resolution, completely empty, no text.",
+                                        "A bright and airy minimalist studio background with soft natural morning light and gentle shadows, pure white marble surface, 8k resolution, completely empty, no text.",
+                                        "A luxurious warm gold and beige studio background, soft bokeh, high-end product photography style, completely empty, 8k resolution, no text.",
+                                        "A modern abstract geometric background in pastel tones, soft lighting, 3d render style, completely empty, perfect for product placement, no text."
+                                    ]
+                                    generated_bgs = []
+                                    def generate_single_bg(prompt):
+                                        try:
+                                            res = model.generate_content(prompt)
+                                            return res.candidates[0].content.parts[0].inline_data.data
+                                        except Exception:
+                                            return None
+                                    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                                        results = list(executor.map(generate_single_bg, bg_prompts))
+                                    for b_data in results:
+                                        if b_data:
+                                            generated_bgs.append(b_data)
+                                    
+                                    while len(generated_bgs) < 4:
+                                        idx = len(generated_bgs)
+                                        # Use target_id's fg_img size for fallback
+                                        target_size = st.session_state[f'{target_id}_fg_img'].size
+                                        fallback = global_create_fallback_bg(idx, target_size)
+                                        out_bytes = io.BytesIO()
+                                        fallback.save(out_bytes, format='PNG')
+                                        generated_bgs.append(out_bytes.getvalue())
+                                        
+                                    st.session_state[f'{target_id}_ai_bg_candidates'] = generated_bgs
+                                    st.success("배경 4종이 성공적으로 생성되었습니다! 아래에서 선택해주세요.")
+                                except Exception as e:
+                                    st.error(f"AI 배경 생성 실패: {e}")
+
                     if f'{target_id}_ai_bg_candidates' in st.session_state and len(st.session_state[f'{target_id}_ai_bg_candidates']) > 0:
                         theme_names = ["1. 다크 스튜디오", "2. 밝은 대리석", "3. 골드 & 베이지", "4. 파스텔 기하학"]
                         opts = theme_names[:len(st.session_state[f'{target_id}_ai_bg_candidates'])]
@@ -1003,7 +1082,7 @@ for i in range(5):
                                         
                                     while len(generated_bgs) < 4:
                                         idx = len(generated_bgs)
-                                        fallback = create_fallback_bg(idx, fg_img.size)
+                                        fallback = global_create_fallback_bg(idx, fg_img.size)
                                         out_bytes = io.BytesIO()
                                         fallback.save(out_bytes, format='PNG')
                                         generated_bgs.append(out_bytes.getvalue())
