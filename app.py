@@ -268,6 +268,7 @@ def render_editor(target_id="hero"):
                 scale = synced_slider("피사체 크기 조절 (배율)", 0.1, 2.0, 1.0, 0.05, f'edit_scale_{target_id}')
                 offset_x = synced_slider("가로 위치 (X)", -1000, 1000, 0, 10, f'edit_x_{target_id}')
                 offset_y = synced_slider("세로 위치 (Y)", -1000, 1000, 0, 10, f'edit_y_{target_id}')
+                fill_blur_bg = st.toggle("✨ 빈 공간을 원본 사진 블러로 채우기", value=False, key=f'edit_fill_blur_{target_id}')
                 erode_size = synced_slider("테두리 색번짐 제거 (픽셀 깎기)", 0, 10, 0, 1, f'edit_erode_{target_id}')
                 
                 st.markdown("---")
@@ -474,20 +475,31 @@ def render_editor(target_id="hero"):
 
             # 2. BG 캐싱
             bg_up_val = bg_upload.getvalue() if bg_upload is not None else None
-            current_bg_params = (bg_up_val, use_solid_bg, bg_color, ai_bg_index)
+            current_bg_params = (bg_up_val, use_solid_bg, bg_color, ai_bg_index, fill_blur_bg)
             if st.session_state.get(f'{target_id}_last_bg_params') != current_bg_params:
-                temp_bg = bg_base.copy()
-                if bg_upload is not None:
-                    temp_bg = PIL.Image.open(io.BytesIO(bg_up_val)).convert("RGBA")
-                    if temp_bg.size != bg_base.size:
-                        temp_bg = temp_bg.resize(bg_base.size, PIL.Image.Resampling.LANCZOS)
-                elif use_solid_bg:
-                    temp_bg = PIL.Image.new("RGBA", bg_base.size, bg_color)
+                if fill_blur_bg:
+                    orig_fg = st.session_state[f'{target_id}_fg_img']
+                    import cv2
+                    import numpy as np
+                    arr = np.array(orig_fg.convert("RGB"))
+                    blur_bg = cv2.resize(arr, (bg_base.size[0], bg_base.size[1]))
+                    ksize = int(max(bg_base.size) * 0.05) * 2 + 1
+                    blur_bg = cv2.GaussianBlur(blur_bg, (ksize, ksize), 0)
+                    blur_bg = (blur_bg * 0.8).astype(np.uint8)
+                    temp_bg = PIL.Image.fromarray(blur_bg).convert("RGBA")
                 else:
-                    if f'{target_id}_ai_bg_candidates' in st.session_state and len(st.session_state[f'{target_id}_ai_bg_candidates']) > ai_bg_index:
-                        temp_bg = PIL.Image.open(io.BytesIO(st.session_state[f'{target_id}_ai_bg_candidates'][ai_bg_index])).convert("RGBA")
+                    temp_bg = bg_base.copy()
+                    if bg_upload is not None:
+                        temp_bg = PIL.Image.open(io.BytesIO(bg_up_val)).convert("RGBA")
                         if temp_bg.size != bg_base.size:
                             temp_bg = temp_bg.resize(bg_base.size, PIL.Image.Resampling.LANCZOS)
+                    elif use_solid_bg:
+                        temp_bg = PIL.Image.new("RGBA", bg_base.size, bg_color)
+                    else:
+                        if f'{target_id}_ai_bg_candidates' in st.session_state and len(st.session_state[f'{target_id}_ai_bg_candidates']) > ai_bg_index:
+                            temp_bg = PIL.Image.open(io.BytesIO(st.session_state[f'{target_id}_ai_bg_candidates'][ai_bg_index])).convert("RGBA")
+                            if temp_bg.size != bg_base.size:
+                                temp_bg = temp_bg.resize(bg_base.size, PIL.Image.Resampling.LANCZOS)
                 
                 st.session_state[f'{target_id}_cached_bg'] = temp_bg
                 st.session_state[f'{target_id}_last_bg_params'] = current_bg_params
