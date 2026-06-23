@@ -323,6 +323,29 @@ with col_pk2:
         st.sidebar.success("삭제 완료!")
 
 st.sidebar.markdown("---")
+st.sidebar.markdown("🚀 **고급 착용샷 AI (Replicate)**")
+st.sidebar.markdown("[👉 Replicate API 토큰 발급](https://replicate.com/)")
+
+rep_key_path = "replicate_key.txt"
+saved_rep_key = ""
+if os.path.exists(rep_key_path):
+    with open(rep_key_path, "r", encoding="utf-8") as f:
+        saved_rep_key = f.read().strip()
+
+replicate_api_key = st.sidebar.text_input("🔑 Replicate API 토큰", type="password", value=saved_rep_key, help="r8_ 로 시작하는 토큰을 입력하세요.")
+col_rk1, col_rk2 = st.sidebar.columns(2)
+with col_rk1:
+    if st.button("토큰 저장", key="save_rep"):
+        with open(rep_key_path, "w", encoding="utf-8") as f:
+            f.write(replicate_api_key)
+        st.sidebar.success("저장 완료!")
+with col_rk2:
+    if st.button("토큰 삭제", key="del_rep"):
+        if os.path.exists(rep_key_path):
+            os.remove(rep_key_path)
+        st.sidebar.success("삭제 완료!")
+
+st.sidebar.markdown("---")
 st.sidebar.header("📁 보관함 (저장된 제품)")
 saved_folders = sorted(os.listdir(SAVE_DIR), reverse=True) if os.path.exists(SAVE_DIR) else []
 if not saved_folders:
