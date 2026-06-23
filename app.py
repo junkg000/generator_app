@@ -419,6 +419,67 @@ if st.sidebar.button("✨ 새 작업 만들기 (초기화)"):
     st.rerun()
 
 # ===========================
+# 🚀 오토파일럿 (원클릭 자동 완성)
+# ===========================
+st.markdown("---")
+with st.expander("🚀 [원클릭 자동 완성] 사진 여러 장으로 전체 페이지 한 번에 만들기!", expanded=True):
+    st.markdown("**1. 제품 사진들을 한 번에 올려주세요. (최대 6장)**")
+    auto_files = st.file_uploader("다중 파일 업로드", accept_multiple_files=True, type=['jpg', 'png', 'jpeg'], key="auto_files")
+    
+    st.markdown("**2. 제품의 핵심 키워드를 입력해 주세요.**")
+    auto_keywords = st.text_input("예: 노란색 구슬 팔찌, 고급스러움, 우아한, 여성용", key="auto_keywords")
+    
+    if st.button("✨ 1초 만에 상세페이지 자동 완성하기", use_container_width=True, type="primary"):
+        if not api_key:
+            st.error("좌측 사이드바에 Gemini API 키를 먼저 입력해 주세요!")
+        elif not auto_files:
+            st.error("사진을 최소 1장 이상 업로드해 주세요!")
+        elif not auto_keywords:
+            st.error("제품 키워드를 입력해 주세요!")
+        else:
+            with st.spinner("AI가 피사체를 분리하고, 최고의 배경을 합성하며, 광고 문구를 작성 중입니다... (약 10~30초 소요)"):
+                import autopilot
+                
+                # Limit to 6 files (1 hero + 5 stories)
+                process_files = auto_files[:6]
+                
+                results = autopilot.run_autopilot_parallel(
+                    process_files, auto_keywords, api_key, photoroom_api_key, replicate_api_key, st.session_state.get('ai_engine', 'Photoroom API'),
+                    advanced_remove_bg, generate_photoroom_bg, generate_replicate_bg
+                )
+                
+                for res in results:
+                    idx = res["index"]
+                    if idx == 0:
+                        # Hero
+                        st.session_state.loaded_hero_b64 = res["original_b64"]
+                        st.session_state.hero_ai_b64 = res["ai_b64"]
+                        st.session_state.hero_ai_mime = res["ai_mime"]
+                        st.session_state.hero_fg_img = PIL.Image.new("RGBA", (1,1)) # Dummy to avoid errors
+                        st.session_state.kw_main = res["title"]
+                        st.session_state.kw_modifier = res["desc"]
+                    else:
+                        # Story
+                        story_idx = idx - 1
+                        if 'loaded_story_blocks' not in st.session_state:
+                            st.session_state.loaded_story_blocks = []
+                        while len(st.session_state.loaded_story_blocks) <= story_idx:
+                            st.session_state.loaded_story_blocks.append({})
+                        st.session_state.loaded_story_blocks[story_idx]['b64'] = res["original_b64"]
+                        st.session_state.loaded_story_blocks[story_idx]['mime'] = res["ai_mime"]
+                        st.session_state.loaded_story_blocks[story_idx]['text'] = f"{res['title']}\n{res['desc']}"
+                        
+                        if 'story_ai_blocks' not in st.session_state:
+                            st.session_state.story_ai_blocks = [None] * 5
+                        st.session_state.story_ai_blocks[story_idx] = {'b64': res["ai_b64"], 'mime': res["ai_mime"]}
+                
+                st.success("🎉 상세페이지 초안이 완벽하게 생성되었습니다! 아래에서 디테일하게 수정해 보세요.")
+                import time
+                time.sleep(2)
+                st.rerun()
+
+st.markdown("---")
+# ===========================
 # 1. 메인 타이틀 & 대표 이미지
 # ===========================
 st.header("1. 메인 타이틀 & 대표 이미지")
