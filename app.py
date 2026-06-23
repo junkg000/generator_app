@@ -525,15 +525,18 @@ def render_editor(target_id="hero"):
                                             with open("replicate_key.txt", "r", encoding="utf-8") as f:
                                                 rep_key = f.read().strip()
                                         
+                                        img_data = None
                                         if rep_key:
-                                            return generate_replicate_bg(prompt, fg_for_prompt, rep_key)
-                                        else:
-                                            # Fallback to gemini if no replicate key
+                                            img_data = generate_replicate_bg(prompt, fg_for_prompt, rep_key)
+                                            
+                                        if img_data is None:
+                                            # Fallback to gemini if no replicate key or if replicate failed
                                             try:
                                                 res = model.generate_content(prompt)
-                                                return res.candidates[0].content.parts[0].inline_data.data
+                                                img_data = res.candidates[0].content.parts[0].inline_data.data
                                             except Exception:
-                                                return None
+                                                pass
+                                        return img_data
                                                 
                                     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
                                         results = list(executor.map(generate_single_bg, bg_prompts))
@@ -1201,14 +1204,17 @@ for i in range(5):
                                             with open("replicate_key.txt", "r", encoding="utf-8") as f:
                                                 rep_key = f.read().strip()
                                                 
+                                        img_data = None
                                         if rep_key:
-                                            return generate_replicate_bg(prompt, fg_img, rep_key)
-                                        else:
+                                            img_data = generate_replicate_bg(prompt, fg_img, rep_key)
+                                            
+                                        if img_data is None:
                                             try:
                                                 res = model.generate_content(prompt)
-                                                return res.candidates[0].content.parts[0].inline_data.data
+                                                img_data = res.candidates[0].content.parts[0].inline_data.data
                                             except Exception:
-                                                return None
+                                                pass
+                                        return img_data
                                             
                                     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
                                         results = executor.map(generate_single_bg, bg_prompts)
