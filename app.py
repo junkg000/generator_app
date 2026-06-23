@@ -69,7 +69,7 @@ def generate_replicate_bg(prompt, fg_img, replicate_key):
         return None
     except Exception as e:
         print("Replicate Error:", e)
-        return None
+        return {"error": str(e)}
 
 def generate_contextual_prompts(fg_img, api_key, use_replicate=False):
     import google.generativeai as genai
@@ -529,13 +529,15 @@ def render_editor(target_id="hero"):
                                         if rep_key:
                                             img_data = generate_replicate_bg(prompt, fg_for_prompt, rep_key)
                                             
-                                        if img_data is None:
+                                        if img_data is None or isinstance(img_data, dict):
+                                            if isinstance(img_data, dict):
+                                                st.session_state[f'{target_id}_replicate_error'] = img_data.get("error", "Unknown error")
                                             # Fallback to gemini if no replicate key or if replicate failed
                                             try:
                                                 res = model.generate_content(prompt)
                                                 img_data = res.candidates[0].content.parts[0].inline_data.data
                                             except Exception:
-                                                pass
+                                                img_data = None
                                         return img_data
                                                 
                                     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
@@ -554,7 +556,13 @@ def render_editor(target_id="hero"):
                                         generated_bgs.append(out_bytes.getvalue())
                                         
                                     st.session_state[f'{target_id}_ai_bg_candidates'] = generated_bgs
-                                    st.success("배경 4종이 성공적으로 생성되었습니다! 아래에서 선택해주세요.")
+                                    
+                                    if f'{target_id}_replicate_error' in st.session_state:
+                                        err = st.session_state[f'{target_id}_replicate_error']
+                                        st.error(f"⚠️ Replicate API 결제 잔액 부족 또는 오류로 인해 무료 제미나이(Gemini)로 대체 생성되었습니다.\n\n(상세: {err})\n\n완벽한 인페인팅 착용샷을 원하시면 Replicate 크레딧을 충전해주세요!")
+                                        del st.session_state[f'{target_id}_replicate_error']
+                                    else:
+                                        st.success("배경 4종이 성공적으로 생성되었습니다! 아래에서 선택해주세요.")
                                 except Exception as e:
                                     st.error(f"AI 배경 생성 실패: {e}")
 
@@ -1208,12 +1216,14 @@ for i in range(5):
                                         if rep_key:
                                             img_data = generate_replicate_bg(prompt, fg_img, rep_key)
                                             
-                                        if img_data is None:
+                                        if img_data is None or isinstance(img_data, dict):
+                                            if isinstance(img_data, dict):
+                                                st.session_state['story_replicate_error'] = img_data.get("error", "Unknown error")
                                             try:
                                                 res = model.generate_content(prompt)
                                                 img_data = res.candidates[0].content.parts[0].inline_data.data
                                             except Exception:
-                                                pass
+                                                img_data = None
                                         return img_data
                                             
                                     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
@@ -1265,6 +1275,12 @@ for i in range(5):
                                     st.session_state[f'story_{i}_fg_img'] = fg_img
                                     st.session_state[f'story_{i}_bg_img'] = bg_img
                                     
+                                    if 'story_replicate_error' in st.session_state:
+                                        err = st.session_state['story_replicate_error']
+                                        st.error(f"⚠️ Replicate API 결제 잔액 부족 또는 오류로 인해 무료 제미나이(Gemini)로 대체 생성되었습니다.\n\n(상세: {err})\n\n완벽한 인페인팅 착용샷을 원하시면 Replicate 크레딧을 충전해주세요!")
+                                        del st.session_state['story_replicate_error']
+                                        
+
                                     if 'story_ai_blocks' in st.session_state and len(st.session_state.story_ai_blocks) > i and st.session_state.story_ai_blocks[i]:
                                         st.session_state.story_ai_blocks[i]['b64'] = None
                                         
