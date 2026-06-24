@@ -190,8 +190,8 @@ def get_rembg_session():
     from rembg import new_session
     return new_session('birefnet-general')
 
-def advanced_remove_bg(img_bytes, use_matting=False, model_idx=1, photoroom_key=""):
-    if photoroom_key and photoroom_key.strip():
+def advanced_remove_bg(img_bytes, use_matting=False, model_idx=0, photoroom_key=""):
+    if photoroom_key and photoroom_key.strip() and model_idx == 0:
         try:
             import requests
             url = 'https://sdk.photoroom.com/v1/segment'
@@ -201,9 +201,18 @@ def advanced_remove_bg(img_bytes, use_matting=False, model_idx=1, photoroom_key=
             if res.status_code == 200:
                 return res.content
             else:
-                st.toast(f'Photoroom API 오류: {res.text}. 기본 AI로 대체합니다.')
+                try:
+                    if "exhausted" in res.text:
+                        st.toast('Photoroom 크레딧 소진. 무료 AI로 대체합니다.', icon="⚠️")
+                    else:
+                        st.toast('Photoroom API 오류. 무료 AI로 대체합니다.', icon="⚠️")
+                except:
+                    pass
         except Exception as e:
-            st.toast(f'Photoroom 연동 오류: {e}. 기본 AI로 대체합니다.')
+            try:
+                st.toast('Photoroom 연동 오류. 무료 AI로 대체합니다.', icon="⚠️")
+            except:
+                pass
             
     # Fallback to rembg
     from rembg import remove, new_session
@@ -216,9 +225,12 @@ def advanced_remove_bg(img_bytes, use_matting=False, model_idx=1, photoroom_key=
     elif model_idx == 3:
         session = new_session('isnet-general-use')
         return remove(img_bytes, session=session, post_process_mask=False)
-    else:
+    elif model_idx == 4:
         session = get_rembg_session()
         return remove(img_bytes, session=session, post_process_mask=True, alpha_matting=use_matting)
+    else: # model_idx == 0 (Photoroom fallback)
+        session = new_session('birefnet-general')
+        return remove(img_bytes, session=session, post_process_mask=False)
 
 def remove_small_noise(img):
     try:
@@ -552,6 +564,7 @@ def render_editor(target_id="hero"):
                 rembg_model_label = st.selectbox(
                     "사용할 AI 엔진 선택 (결과물이 어색할 때 변경해보세요)",
                     [
+                        "0. Photoroom (최고 품질, API 키 필요)",
                         "1. 기본 부드러운 모델 (u2net)",
                         "2. 최신 고성능 모델 (birefnet-general)",
                         "3. 초정밀 외곽선 모델 (isnet-general-use)",
@@ -571,6 +584,7 @@ def render_editor(target_id="hero"):
                         if rembg_model_label.startswith("1"): m_idx = 1
                         elif rembg_model_label.startswith("2"): m_idx = 2
                         elif rembg_model_label.startswith("3"): m_idx = 3
+                        elif rembg_model_label.startswith("4"): m_idx = 4
                         
                         fg_bytes = advanced_remove_bg(img_byte_arr.getvalue(), use_matting=False, model_idx=m_idx, photoroom_key=photoroom_api_key)
                         out = PIL.Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
