@@ -595,7 +595,7 @@ def render_editor(target_id="hero"):
                     
                     if st.button("✨ AI 배경 새로 생성하기", key=f"edit_gen_ai_{target_id}"):
                         saved_key = ""
-                        import os
+                        pass # removed import os to fix UnboundLocalError
                         if os.path.exists("api_key.txt"):
                             with open("api_key.txt", "r") as f:
                                 saved_key = f.read().strip()
@@ -611,7 +611,7 @@ def render_editor(target_id="hero"):
                                     model = genai.GenerativeModel('models/gemini-2.5-flash-image')
                                     fg_for_prompt = st.session_state[f'{target_id}_fg_img']
                                     
-                                    import os
+                                    pass # removed import os to fix UnboundLocalError
                                     rep_key = ""
                                     if os.path.exists("replicate_key.txt"):
                                         with open("replicate_key.txt", "r", encoding="utf-8") as f:
@@ -620,7 +620,7 @@ def render_editor(target_id="hero"):
                                     bg_prompts = generate_contextual_prompts(fg_for_prompt, saved_key, use_replicate=bool(rep_key))
                                     generated_bgs = []
                                     def generate_single_bg(prompt):
-                                        import os
+                                        pass # removed import os to fix UnboundLocalError
                                         engine = st.session_state.get('ai_engine', 'Photoroom API')
                                         img_data = None
                                         
@@ -1336,7 +1336,7 @@ for i in range(5):
                                     generated_bgs = []
                                     import concurrent.futures
                                     def generate_single_bg(prompt):
-                                        import os
+                                        pass # removed import os to fix UnboundLocalError
                                         engine = st.session_state.get('ai_engine', 'Photoroom API')
                                         img_data = None
                                         
