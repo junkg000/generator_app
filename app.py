@@ -1067,7 +1067,7 @@ with col2:
 
     parts = []
     brand_val = brand_name.strip() if brand_name.strip() else "해송"
-    parts.append(f"[{brand_val}]")
+    parts.append(brand_val)
     if modifier.strip(): parts.append(modifier.strip())
     if main_keyword.strip(): parts.append(main_keyword.strip())
     if sub_keyword1.strip(): parts.append(sub_keyword1.strip())
