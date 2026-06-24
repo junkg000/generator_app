@@ -22,31 +22,39 @@ Example: A premium dark studio setting resting on elegant marble with realistic 
 def generate_auto_copy(model, keywords, index):
     if index == 0:
         prompt = f"""
-You are a top-tier copywriter. Write a compelling main Title and Description for this product.
-Product keywords: {keywords}
-CRITICAL: The output MUST be entirely in natural, engaging Korean language (한국어).
-Format:
-TITLE: [Catchy Main Title in Korean]
-DESC: [1-2 sentences of engaging description in Korean]
+당신은 대한민국 최고의 온라인 쇼핑몰 전문 카피라이터입니다. 아래 제품 키워드를 바탕으로 고객의 시선을 사로잡는 '메인 카피(제목)'와 '서브 카피(설명)'를 작성해주세요.
+제품 키워드: {keywords}
+
+[절대 규칙 - 반드시 지킬 것]
+1. 무조건 100% 한국어(Korean)로만 작성하세요. 영어 단어를 절대 섞어 쓰지 마세요.
+2. TITLE(제목)은 20자 이내로 짦고 강렬하게 작성하세요.
+
+출력 형식:
+TITLE: [짧고 강렬한 한국어 메인 카피]
+DESC: [1~2줄 길이의 매력적인 한국어 제품 설명]
 """
     else:
         prompt = f"""
-You are a top-tier copywriter. Write a compelling section Title and Description for feature #{index} of this product.
-Product keywords: {keywords}
-CRITICAL: The output MUST be entirely in natural, engaging Korean language (한국어).
-Format:
-TITLE: [Catchy Section Title in Korean]
-DESC: [1-2 sentences of engaging description in Korean]
+당신은 대한민국 최고의 온라인 쇼핑몰 전문 카피라이터입니다. 아래 제품 키워드를 바탕으로 제품의 특징을 어필하는 '상세 카피(제목)'와 '설명'을 작성해주세요.
+제품 키워드: {keywords}
+
+[절대 규칙 - 반드시 지킬 것]
+1. 무조건 100% 한국어(Korean)로만 작성하세요. 영어 단어를 절대 섞어 쓰지 마세요.
+2. TITLE(제목)은 20자 이내로 짦고 강렬하게 작성하세요.
+
+출력 형식:
+TITLE: [짧고 강렬한 한국어 섹션 카피]
+DESC: [1~2줄 길이의 매력적인 한국어 제품 설명]
 """
     try:
         res = model.generate_content(prompt)
         text = res.text.strip()
         lines = text.split('\n')
-        title = lines[0].replace('TITLE:', '').strip() if len(lines) > 0 else "Product Feature"
-        desc = lines[1].replace('DESC:', '').strip() if len(lines) > 1 else "Amazing product description."
+        title = lines[0].replace('TITLE:', '').strip() if len(lines) > 0 else "최고의 상품"
+        desc = lines[1].replace('DESC:', '').strip() if len(lines) > 1 else "정말 매력적인 상품입니다. 지금 바로 확인해보세요."
         return title, desc
     except Exception:
-        return "Awesome Product", "This is an amazing product."
+        return "최고의 상품", "정말 매력적인 상품입니다. 지금 바로 확인해보세요."
 
 def process_single_image(idx, file_bytes, keywords, api_key, photoroom_key, replicate_key, engine, advanced_remove_bg, generate_photoroom_bg, generate_replicate_bg):
     # 1. Remove BG
