@@ -205,12 +205,17 @@ def advanced_remove_bg(img_bytes, use_matting=False, model_idx=0, photoroom_key=
                     if "exhausted" in res.text:
                         st.toast('Photoroom 크레딧 소진. 무료 AI로 대체합니다.', icon="⚠️")
                     else:
-                        st.toast('Photoroom API 오류. 무료 AI로 대체합니다.', icon="⚠️")
+                        import json
+                        try:
+                            msg = json.loads(res.text).get('detail', res.text)
+                        except:
+                            msg = res.text
+                        st.toast(f'Photoroom 오류: {msg[:100]}. 무료 AI로 대체합니다.', icon="⚠️")
                 except:
                     pass
         except Exception as e:
             try:
-                st.toast('Photoroom 연동 오류. 무료 AI로 대체합니다.', icon="⚠️")
+                st.toast(f'Photoroom 연동 오류: {str(e)[:50]}. 무료 AI로 대체합니다.', icon="⚠️")
             except:
                 pass
             
@@ -521,6 +526,11 @@ def synced_slider(label, min_val, max_val, default_val, step, key_prefix):
     with col2:
         st.number_input(label, min_val, max_val, st.session_state[val_key], step, key=f"{key_prefix}_num", on_change=on_num, label_visibility="collapsed")
     return st.session_state[val_key]
+def clear_editor_cache(target_id):
+    st.session_state.pop(f"persistent_editor_{target_id}", None)
+    keys_to_clear = [k for k in st.session_state.keys() if k.startswith("edit_") and target_id in k]
+    for k in keys_to_clear:
+        st.session_state.pop(k, None)
 
 @st.dialog("🎨 세부 편집기 (팝업창)", width="large")
 def render_editor(target_id="hero"):
@@ -1024,6 +1034,7 @@ with col1:
                 st.session_state.hero_fg_img = fg
                 st.session_state.hero_bg_img = bg
                 st.session_state.hero_ai_b64 = None # 초기화
+                clear_editor_cache("hero")
             render_editor("hero")
     elif st.session_state.get('loaded_hero_b64'):
         import base64
@@ -1259,6 +1270,7 @@ for i in range(5):
                         
                         if 'story_ai_blocks' in st.session_state and len(st.session_state.story_ai_blocks) > i and st.session_state.story_ai_blocks[i]:
                             st.session_state.story_ai_blocks[i]['b64'] = None
+                        clear_editor_cache(f"story_{i}")
                     render_editor(f"story_{i}")
             
             ai_b64 = ai_info['b64'] if ai_info and ai_info.get('b64') else None
