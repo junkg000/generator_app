@@ -1032,7 +1032,7 @@ with col2:
         try:
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel('gemini-2.5-flash')
-            brand_ctx = f"'{st.session_state.kw_brand}' (이 브랜드를 유지)" if st.session_state.kw_brand.strip() else "가상으로 자연스럽게 생성"
+            brand_ctx = f"'{st.session_state.kw_brand}' (이 브랜드를 반드시 유지)" if st.session_state.kw_brand.strip() else "'해송' (이 브랜드명을 무조건 사용할 것)"
             mod_ctx = f"'{st.session_state.kw_modifier}' (유지)" if st.session_state.kw_modifier.strip() else "매력적인 수식어 추천"
             seo_target = st.session_state.get("seo_source", "네이버 쇼핑")
             prompt = f"""
@@ -1058,7 +1058,7 @@ with col2:
             if res_text.endswith("```"): res_text = res_text[:-3]
             parsed = json.loads(res_text.strip())
             
-            if not st.session_state.kw_brand.strip(): st.session_state.kw_brand = parsed.get("brand", "")
+            if not st.session_state.kw_brand.strip(): st.session_state.kw_brand = parsed.get("brand", "해송")
             if not st.session_state.kw_modifier.strip(): st.session_state.kw_modifier = parsed.get("modifier", "")
             if not st.session_state.kw_sub1.strip(): st.session_state.kw_sub1 = parsed.get("sub1", "")
             if not st.session_state.kw_sub2.strip(): st.session_state.kw_sub2 = parsed.get("sub2", "")
