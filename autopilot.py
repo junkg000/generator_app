@@ -24,17 +24,19 @@ def generate_auto_copy(model, keywords, index):
         prompt = f"""
 You are a top-tier copywriter. Write a compelling main Title and Description for this product.
 Product keywords: {keywords}
+CRITICAL: The output MUST be entirely in natural, engaging Korean language (한국어).
 Format:
-TITLE: [Catchy Main Title]
-DESC: [1-2 sentences of engaging description]
+TITLE: [Catchy Main Title in Korean]
+DESC: [1-2 sentences of engaging description in Korean]
 """
     else:
         prompt = f"""
 You are a top-tier copywriter. Write a compelling section Title and Description for feature #{index} of this product.
 Product keywords: {keywords}
+CRITICAL: The output MUST be entirely in natural, engaging Korean language (한국어).
 Format:
-TITLE: [Catchy Section Title]
-DESC: [1-2 sentences of engaging description]
+TITLE: [Catchy Section Title in Korean]
+DESC: [1-2 sentences of engaging description in Korean]
 """
     try:
         res = model.generate_content(prompt)
