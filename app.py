@@ -1035,7 +1035,21 @@ with col2:
             brand_ctx = f"'{st.session_state.kw_brand}' (이 브랜드를 유지)" if st.session_state.kw_brand.strip() else "가상으로 자연스럽게 생성"
             mod_ctx = f"'{st.session_state.kw_modifier}' (유지)" if st.session_state.kw_modifier.strip() else "매력적인 수식어 추천"
             seo_target = st.session_state.get("seo_source", "네이버 쇼핑")
-            prompt = f"다음 핵심 상품 키워드 '{st.session_state.kw_main}'를 기반으로 {seo_target} 상품명 최적화 공식을 완성해줘. JSON 형식으로만 응답해. 키는 'brand', 'modifier', 'sub1', 'sub2'야.\n[조건]\n- 브랜드명: {brand_ctx}\n- 수식어: {mod_ctx}\n- sub1, sub2: {seo_target} 연관 검색량이 많을 만한 핵심 서브키워드 추천\n출력 예시: {{\"brand\": \"해송\", \"modifier\": \"초보자용 부드러운\", \"sub1\": \"민화붓\", \"sub2\": \"캘리그라피\"}}"
+            prompt = f"""
+다음 핵심 상품 키워드 '{st.session_state.kw_main}'를 기반으로 {seo_target} 상품명 최적화 공식을 완성해줘. JSON 형식으로만 응답해. 키는 'brand', 'modifier', 'sub1', 'sub2'야.
+
+[절대 규칙 - 반드시 지킬 것]
+1. 무조건 100% 한국어(Korean)로만 작성해. 영어 단어나 알파벳을 절대 섞지 마.
+2. 마크다운(** 등)이나 특수문자를 쓰지 말고 순수 텍스트만 적어.
+3. 수식어(modifier)는 15자 이내로 짧게 작성해.
+
+[조건]
+- 브랜드명: {brand_ctx}
+- 수식어: {mod_ctx}
+- sub1, sub2: {seo_target} 연관 검색량이 많을 만한 핵심 서브키워드 추천
+
+출력 예시: {{"brand": "해송", "modifier": "초보자용 부드러운", "sub1": "민화붓", "sub2": "캘리그라피"}}
+"""
             response = model.generate_content(prompt)
             import json
             res_text = response.text.strip()
