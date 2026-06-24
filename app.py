@@ -456,8 +456,8 @@ with st.expander("🚀 [원클릭 자동 완성] 사진 여러 장으로 전체 
                         st.session_state.hero_ai_b64 = res["ai_b64"]
                         st.session_state.hero_ai_mime = res["ai_mime"]
                         st.session_state.hero_fg_img = PIL.Image.new("RGBA", (1,1)) # Dummy to avoid errors
-                        st.session_state.kw_main = res["title"]
-                        st.session_state.kw_modifier = res["desc"]
+                        st.session_state.kw_main = auto_keywords
+                        st.session_state.kw_modifier = res["title"]
                     else:
                         # Story
                         story_idx = idx - 1
@@ -1066,7 +1066,8 @@ with col2:
         sub_keyword2 = st.text_input("서브 키워드 2", key="kw_sub2", placeholder="예: 동양화")
 
     parts = []
-    if brand_name.strip(): parts.append(f"[{brand_name.strip()}]")
+    brand_val = brand_name.strip() if brand_name.strip() else "해송"
+    parts.append(f"[{brand_val}]")
     if modifier.strip(): parts.append(modifier.strip())
     if main_keyword.strip(): parts.append(main_keyword.strip())
     if sub_keyword1.strip(): parts.append(sub_keyword1.strip())
